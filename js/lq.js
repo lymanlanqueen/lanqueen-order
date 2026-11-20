@@ -62,6 +62,7 @@ var LQ = (() => {
     matchModel: () => matchModel,
     normaliseDraw: () => normaliseDraw,
     parseHookHeight: () => parseHookHeight,
+    hookTypeSpec: () => hookTypeSpec,
     FREIGHT_NOTES: () => FREIGHT_NOTES,
     parsePaste: () => parsePaste,
     quoteFreight: () => quoteFreight,
@@ -301,6 +302,17 @@ var LQ = (() => {
     if (!matched || matched.status !== "ok") return null;
     return resolveFabric(matched.entry, colorNumber);
   }
+  function hookTypeSpec(value) {
+    if (value == null || typeof value === "number") return "";
+    const parts = String(value).match(/\d+\s*\u94A9/g);
+    if (!parts) return "";
+    return parts.map((part) => part.replace(/\s+/g, "")).join("/");
+  }
+  function countUnlessHookSpec(value) {
+    if (value == null || value === "" || hookTypeSpec(value)) return null;
+    const n = parseDecimal(value);
+    return Number.isFinite(n) ? n : null;
+  }
   function parseHookHeight(value, unit) {
     if (value == null || value === "") return { mm: null, entered: "" };
     const text = String(value).trim();
@@ -368,9 +380,9 @@ var LQ = (() => {
         modelError: matched.status === "version" ? matched.en : "",
         colorNumber: get(6),
         widthBasis: normaliseBasis(get(7)) || opts.orderWidthBasis,
-        quantity: get(8) || "1",
+        quantity: hookTypeSpec(get(8)) && !get(10) ? "1" : (get(8) || "1"),
         hookHeight: get(9),
-        hookSpec: get(10),
+        hookSpec: get(10) || hookTypeSpec(get(8)),
         fabricPerPleat: opts.orderFilm || ""
       });
     });
@@ -954,19 +966,18 @@ var LQ = (() => {
       warnings.push(msg("fullness-tol", "stated fullness differs, please confirm (possible input error)", "\u5BA2\u6237\u586B\u5199\u7684\u4E30\u6EE1\u5EA6\u4E0E\u5B9E\u9645\u4E0D\u540C\uFF0C\u8BF7\u786E\u8BA4\uFF08\u53EF\u80FD\u662F\u586B\u5199\u6709\u8BEF\uFF09", "orderedFullness"));
     }
     const hookHeight = parseHookHeight(input.hookHeight, input.hookHeightUnit);
-    const hookSpec = input.hookSpec == null ? "" : String(input.hookSpec);
+    let hookSpec = input.hookSpec == null ? "" : String(input.hookSpec).trim();
+    if (!hookSpec) hookSpec = hookTypeSpec(input.runnerCount) || hookTypeSpec(input.leftRunnerCount) || hookTypeSpec(input.rightRunnerCount) || hookTypeSpec(input.remarks);
     const calculatedRunners = panels.map((panel) => panel.runners);
     let suppliedRunners = null;
-    if (Array.isArray(input.runnerCount)) suppliedRunners = input.runnerCount.map((value) => parseDecimal(value));
-    else if (input.runnerCount != null && input.runnerCount !== "") {
-      const one = parseDecimal(input.runnerCount);
-      if (Number.isFinite(one)) suppliedRunners = panels.map(() => one);
+    if (Array.isArray(input.runnerCount)) suppliedRunners = input.runnerCount.map((value) => countUnlessHookSpec(value));
+    else {
+      const one = countUnlessHookSpec(input.runnerCount);
+      if (one != null) suppliedRunners = panels.map(() => one);
     }
-    if (input.leftRunnerCount != null && input.leftRunnerCount !== "" || input.rightRunnerCount != null && input.rightRunnerCount !== "") {
-      const leftRunner = parseDecimal(input.leftRunnerCount);
-      const rightRunner = parseDecimal(input.rightRunnerCount);
-      suppliedRunners = [leftRunner, rightRunner];
-    }
+    const leftRunner = countUnlessHookSpec(input.leftRunnerCount);
+    const rightRunner = countUnlessHookSpec(input.rightRunnerCount);
+    if (leftRunner != null || rightRunner != null) suppliedRunners = [leftRunner, rightRunner];
     const runnerOverride = !!(suppliedRunners && suppliedRunners.some((value, index) => Number.isFinite(value) && value !== calculatedRunners[index]));
     if (runnerOverride) {
       warnings.push(msg("runner-diff", "The runner count you entered does not match the calculated count. The fabric price is unchanged.", "\u586B\u5199\u7684\u6ED1\u8F66\u6570\u4E0E\u8BA1\u7B97\u503C\u4E0D\u540C\uFF0C\u4E0D\u6539\u9762\u6599\u4EF7\u3002", "runnerCount"));

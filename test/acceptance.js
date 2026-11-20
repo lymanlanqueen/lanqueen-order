@@ -109,6 +109,19 @@ function styleRow(id, alias, key, pending) {
 styleRow("AC-F-01", "工字褶", "inverted");
 styleRow("AC-F-02", "工字褶", "inverted");
 styleRow("AC-F-03", "工字褶", "inverted");
+function hookSpecCase(note) {
+  const input = {
+    name: "W", heading: "inverted", orientation: "fixed-height", lining: "none", topFinish: "none",
+    width: 2, height: 2.6, unit: "m", fabricPerPleat: 24, draw: "single-left", hem: "8+2",
+    returnCm: 5, overlapCm: 5, tieback: "none", hardware: "customer", quantity: 1, widthBasis: "finished",
+    remarks: note, runnerCount: note
+  };
+  const noted = LQ.computeWindow(input, null, rules, prices);
+  const plain = LQ.computeWindow(Object.assign({}, input, { remarks: "", runnerCount: null }), null, rules, prices);
+  return noted.hookSpec === "89钩" && noted.runnersPerPanel.join() === plain.runnersPerPanel.join() && noted.totalHooks === plain.totalHooks && noted.totalHooks !== 89;
+}
+record("AC-F-01 hooks", hookSpecCase("2个89钩") ? "pass" : "fail", "89钩 is the hook spec; the runner count stays the fold count");
+record("AC-F-03 hooks", hookSpecCase("工字褶用89钩") ? "pass" : "fail", "89钩 is the hook spec; the runner count stays the fold count");
 styleRow("AC-F-04", "韩褶", "x_pleat");
 styleRow("AC-D-01", "天际帘", "ripple_fold");
 styleRow("AC-G-03", "天际帘", "ripple_fold");
@@ -121,11 +134,9 @@ const notRunnable = [
   ["AC-B-03 amount", "no dimensions-plus-catalog line to price; amount omitted from the test"],
   ["AC-E-01", "no window dimensions"],
   ["AC-E-02", "no window dimensions"],
-  ["AC-F-01 hooks", "hook count recorded, but no width, so the 1:1 check cannot run"],
-  ["AC-F-01 amount", "no window dimensions; amount omitted from the test"],
+  ["AC-F-01 amount", "no window dimensions on the source note; amount omitted from the test"],
   ["AC-F-02 amount", "no window dimensions; amount omitted from the test"],
-  ["AC-F-03 hooks", "hook count recorded, but no width, so the 1:1 check cannot run"],
-  ["AC-F-03 amount", "no window dimensions; amount omitted from the test"],
+  ["AC-F-03 amount", "no window dimensions on the source note; amount omitted from the test"],
   ["AC-G-01", "no window dimensions"],
   ["AC-G-02", "no window dimensions"],
   ["AC-H-01", "no window dimensions"],
