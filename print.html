@@ -12,9 +12,11 @@
   </header>
   <main class="no-print" style="display:block;max-width:800px">
     <h1>重打订单</h1>
-    <p class="lede">把邮件里的 JSON 粘贴到下面，或上传 .json 文件。然后打印 A4。客户确认单和生产单会各出一页。</p>
+    <p class="lede">把邮件里的 JSON 粘贴到下面，或上传 .json 文件。金额会按订单参数和面料库重算，不采用 JSON 里的数字。若不一致，页面会标出。Reference price (BOC conversion rate) / 参考价（中行折算价）。</p>
+    <p class="warn recompute" id="diff" hidden></p>
     <textarea id="json" placeholder='{"number":"LQ-...","customer":{...},"windows":[...]}'></textarea>
     <p><input id="file" type="file" accept="application/json,.json"></p>
+    <p><label><input id="en-only" type="checkbox"> English only / 客户单仅英文</label> <label><input id="no-logo" type="checkbox"> No logo / 无标识</label></p>
     <p><button class="btn" id="render" type="button">生成订单</button> <button class="btn alt" id="print" type="button">打印 / 存 PDF</button></p>
     <p class="warn" id="err"></p>
   </main>
@@ -23,8 +25,17 @@
   <script src="js/sheet.js"></script>
   <script>
     const err = document.querySelector("#err");
+    const diff = document.querySelector("#diff");
+    let catalog = null;
+    let rates = null;
     function show(text) {
       err.textContent = "";
+      diff.hidden = true;
+      diff.textContent = "";
+      if (!catalog) {
+        err.textContent = "面料库还没有加载，不能重算，已拒绝使用 JSON 里的金额。 / The fabric list is not loaded, so pasted amounts were not used.";
+        return;
+      }
       let order;
       try { order = JSON.parse(text); }
       catch (error) { err.textContent = "JSON 无法解析。"; return; }
@@ -32,10 +43,24 @@
         err.textContent = "这不是一份订单 JSON。需要 customer 和 windows。";
         return;
       }
-      document.querySelector("#print-root").innerHTML = LQSheet.sheetsHtml(order);
+      order.presentation = { englishOnly: document.querySelector("#en-only").checked, hideLogo: document.querySelector("#no-logo").checked };
+      const checked = LQ.recomputeOrder(order, catalog, rates);
+      checked.order.presentation = order.presentation;
+      if (checked.diffs.length) {
+        diff.hidden = false;
+        diff.innerHTML = "<b>金额已重算，与粘贴的 JSON 不一致 / Amounts were recomputed and do not match the pasted JSON.</b><br>" +
+          checked.diffs.map((item) => (item.index >= 0 ? "Window " + (item.index + 1) : "Order") + " " + item.field + ": JSON " + item.pasted + " → " + item.recomputed).join("<br>");
+      }
+      document.querySelector("#print-root").innerHTML = LQSheet.sheetsHtml(checked.order);
     }
     document.querySelector("#render").addEventListener("click", () => show(document.querySelector("#json").value));
     document.querySelector("#print").addEventListener("click", () => window.print());
+    Promise.all([fetch("data/catalog.json").then((response) => response.json()), fetch("data/rates.json").then((response) => response.json())]).then(([fabrics, rateFile]) => {
+      catalog = fabrics;
+      rates = rateFile;
+    }).catch(() => {
+      err.textContent = "面料库没有加载，不能重算。 / The fabric list did not load, so amounts cannot be recomputed.";
+    });
     document.querySelector("#file").addEventListener("change", (event) => {
       const file = event.target.files && event.target.files[0];
       if (!file) return;

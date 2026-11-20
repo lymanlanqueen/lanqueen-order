@@ -1,0 +1,8 @@
+{
+  "name": "lanqueen-order",
+  "private": true,
+  "description": "LAN QUEEN overseas curtain order form",
+  "scripts": {
+    "test": "node test/run_tests.js && node test/extra_checks.js && node test/rules.js && node test/step3.js && node test/acceptance.js && node test/headings.js && node test/ripple_parity.js && node test/freight.js && node test/review_rows.js"
+  }
+}

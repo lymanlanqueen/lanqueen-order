@@ -17,6 +17,14 @@ On this repository you can also turn on Pages → Deploy from branch → `main` 
 
 `print.html` is for the studio. Customers do not need it. The confirmation page on the form also has Print / Save PDF.
 
-Prices are CNY finished price × actual fabric metres. USD 6.766 and AUD 4.8592 (2026-06-01) are estimates only. The page states that the final amount uses the Bank of China rate on the day of remittance.
+Headings are the eight official pleats plus Grommet / Eyelet. Ripple Fold keeps the S-Wave rule. The other pleats keep the current shared spacing formula, and Inverted Pleat keeps the existing extra pleat. A bare “pinch” is not treated as Double Pinch Pleat.
+
+The curtain total is finished RMB per metre × fabric usage. 散剪面料价 Cut Fabric Price is shown and is not part of that total. Lining, when chosen, is Endura at its finished price (82.5 RMB/m in the current list) × the same usage × quantity. Actual fullness is (usage − side hems) ÷ finished width, to one decimal; the side-hem allowance stays in the priced usage. Fixed-width (定宽) usage is the number of fabric widths × (finished height + 30 cm). Converted amounts are a reference price (BOC conversion rate) / 参考价（中行折算价）. The remittance-day Bank of China rate is still the final conversion.
+
+`node tools/build_catalog.js` rebuilds `data/catalog.json` from `tools/pricelist_full.txt`. `npm test` runs the order checks.
+
+Preview this branch: https://htmlpreview.github.io/?https://github.com/lymanlanqueen/lanqueen-order/blob/fix/step1-step2/index.html
+
+raw.githack.com also serves the branch, but it shows an “Open the page” step first. This repository’s GitHub Pages settings are left on `main` and are not changed from this branch.
 
 Do not run a build. `js/lq.js` is already the same calculation module as the studio app.
