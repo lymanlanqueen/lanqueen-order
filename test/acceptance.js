@@ -22,28 +22,28 @@ function wave(partial) {
 }
 
 const windows = [
-  { id: "AC-ANT-01-W1", width: 2.38, draw: "single-right", pitch: 6, hooks: 42 },
-  { id: "AC-ANT-01-W2", width: 3.136, draw: "single-left", pitch: 6, hooks: 56 },
-  { id: "AC-ANT-01-W3", width: 3.796, draw: "double", pitch: 6, hooks: 68 },
-  { id: "AC-ANT-01-W4", width: 3.029, draw: "single-left", pitch: 6, hooks: 54 },
-  { id: "AC-ANT-02-W1", width: 2.236, draw: "single-right", pitch: 5.4, hooks: 44 },
-  { id: "AC-ANT-02-W2", width: 2.236, draw: "single-left", pitch: 5.4, hooks: 44 },
-  { id: "AC-ANT-02-W3", width: 2.22, draw: "single-right", pitch: 5.4, hooks: 44 },
-  { id: "AC-ANT-02-W4", width: 2.22, draw: "single-left", pitch: 5.4, hooks: 44 },
-  { id: "AC-ANT-02-W5", width: 2.32, draw: "single-right", pitch: 5.4, hooks: 46 },
-  { id: "AC-ANT-02-W6", width: 2.3, draw: "single-right", pitch: 5.4, hooks: 46 },
-  { id: "AC-ANT-02-W7", width: 2.32, draw: "single-left", pitch: 5.4, hooks: 46 },
-  { id: "AC-ANT-03-W1", width: 4.86, draw: "double", pitch: 5.4, hooks: 96 },
-  { id: "AC-ANT-03-W2", width: 4.196, draw: "single-left", pitch: 5.4, hooks: 80 },
-  { id: "AC-ANT-03-W3", width: 3.7, draw: "single-right", pitch: 5.4, hooks: 72 },
-  { id: "AC-ANT-03-W4", width: 3.583, draw: "double", pitch: 5.4, hooks: 72 },
-  { id: "AC-ANT-03-W5", width: 3.565, draw: "double", pitch: 5.4, hooks: 72 }
+  { id: "AC-A-01-W1", width: 2.38, draw: "single-right", pitch: 6, hooks: 42 },
+  { id: "AC-A-01-W2", width: 3.136, draw: "single-left", pitch: 6, hooks: 56 },
+  { id: "AC-A-01-W3", width: 3.796, draw: "double", pitch: 6, hooks: 68 },
+  { id: "AC-A-01-W4", width: 3.029, draw: "single-left", pitch: 6, hooks: 54 },
+  { id: "AC-A-02-W1", width: 2.236, draw: "single-right", pitch: 5.4, hooks: 44 },
+  { id: "AC-A-02-W2", width: 2.236, draw: "single-left", pitch: 5.4, hooks: 44 },
+  { id: "AC-A-02-W3", width: 2.22, draw: "single-right", pitch: 5.4, hooks: 44 },
+  { id: "AC-A-02-W4", width: 2.22, draw: "single-left", pitch: 5.4, hooks: 44 },
+  { id: "AC-A-02-W5", width: 2.32, draw: "single-right", pitch: 5.4, hooks: 46 },
+  { id: "AC-A-02-W6", width: 2.3, draw: "single-right", pitch: 5.4, hooks: 46 },
+  { id: "AC-A-02-W7", width: 2.32, draw: "single-left", pitch: 5.4, hooks: 46 },
+  { id: "AC-A-03-W1", width: 4.86, draw: "double", pitch: 5.4, hooks: 96 },
+  { id: "AC-A-03-W2", width: 4.196, draw: "single-left", pitch: 5.4, hooks: 80 },
+  { id: "AC-A-03-W3", width: 3.7, draw: "single-right", pitch: 5.4, hooks: 72 },
+  { id: "AC-A-03-W4", width: 3.583, draw: "double", pitch: 5.4, hooks: 72 },
+  { id: "AC-A-03-W5", width: 3.565, draw: "double", pitch: 5.4, hooks: 72 }
 ];
 
 const orders = [
-  { id: "AC-ANT-01", windows: windows.filter((row) => row.id.startsWith("AC-ANT-01")), usageAt30: 33.75, usageAt24: null },
-  { id: "AC-ANT-02", windows: windows.filter((row) => row.id.startsWith("AC-ANT-02")), usageAt30: 48.15, usageAt24: null },
-  { id: "AC-ANT-03", windows: windows.filter((row) => row.id.startsWith("AC-ANT-03")), usageAt30: null, usageAt24: 60.54 }
+  { id: "AC-A-01", windows: windows.filter((row) => row.id.startsWith("AC-A-01")), usageAt30: 33.75, usageAt24: null },
+  { id: "AC-A-02", windows: windows.filter((row) => row.id.startsWith("AC-A-02")), usageAt30: 48.15, usageAt24: null },
+  { id: "AC-A-03", windows: windows.filter((row) => row.id.startsWith("AC-A-03")), usageAt30: null, usageAt24: 60.54 }
 ];
 
 let failed = 0;
@@ -67,25 +67,25 @@ windows.forEach((row) => {
 const unequal = wave({ width: 5.095, draw: "double", gliderPitch: 5.4, leftWidth: 2.85, rightWidth: 2.245, unit: "m" });
 const left = unequal.runnersPerPanel[0];
 const right = unequal.runnersPerPanel[1];
-record("AC-ANT-03-W6 sides", left === 56 && right === 44 && left + right === 100 ? "pass" : "fail", "L " + left + " R " + right + " (baseline split was 50/50)");
+record("AC-A-03-W6 sides", left === 56 && right === 44 && left + right === 100 ? "pass" : "fail", "L " + left + " R " + right + " (baseline split was 50/50)");
 
 function orderUsage(rows, film) {
   return Math.round(rows.reduce((sum, row) => sum + wave({ width: row.width, draw: row.draw, gliderPitch: row.pitch, fabricPerPleat: film }).usageMetersPerPiece, 0) * 100) / 100;
 }
-record("AC-ANT-01 usage vs film", "pending-owner", "historical 33.75 m matches film 30 (" + orderUsage(orders[0].windows, 30) + " m) not the default 24 (" + orderUsage(orders[0].windows, 24) + " m). Film was not on the order.");
-record("AC-ANT-02 usage vs film", "pending-owner", "historical 48.15 m matches film 30 (" + orderUsage(orders[1].windows, 30) + " m) not the default 24 (" + orderUsage(orders[1].windows, 24) + " m). Film was not on the order.");
-record("AC-ANT-03 usage vs film", "pending-owner", "historical 60.54 m matches film 24 (" + orderUsage(orders[2].windows.concat([{ width: 5.095, draw: "double", pitch: 5.4 }]), 24) + " m). Film was not on the order.");
+record("AC-A-01 usage vs film", "pending-owner", "historical 33.75 m matches film 30 (" + orderUsage(orders[0].windows, 30) + " m) not the default 24 (" + orderUsage(orders[0].windows, 24) + " m). Film was not on the order.");
+record("AC-A-02 usage vs film", "pending-owner", "historical 48.15 m matches film 30 (" + orderUsage(orders[1].windows, 30) + " m) not the default 24 (" + orderUsage(orders[1].windows, 24) + " m). Film was not on the order.");
+record("AC-A-03 usage vs film", "pending-owner", "historical 60.54 m matches film 24 (" + orderUsage(orders[2].windows.concat([{ width: 5.095, draw: "double", pitch: 5.4 }]), 24) + " m). Film was not on the order.");
 
-function elite(width, height, draw, film, stated) {
+function custB(width, height, draw, film, stated) {
   return wave({ width, height, draw, unit: "m", gliderPitch: 6, fabricPerPleat: film, orderedFullness: stated, widthBasis: "finished" });
 }
-const eli1 = elite(5.5, 2.58, "single-right", 24, 2);
-const eli2 = elite(4.83, 2.33, "double", 24, 2);
-const eli3 = elite(3.79, 2.33, "single-left", 24, 1.8);
-const eli3film22 = elite(3.79, 2.33, "single-left", 22, 1.8);
-record("AC-ELI-01 fullness", Math.abs(eli1.fullnessDisplay - 2) <= 0.1 + 1e-9 ? "pass" : "fail", "display " + eli1.fullnessDisplay + " stated 2.0");
-record("AC-ELI-02 fullness", Math.abs(eli2.fullnessDisplay - 2) <= 0.1 + 1e-9 ? "pass" : "fail", "display " + eli2.fullnessDisplay + " stated 2.0");
-record("AC-ELI-03 fullness", "pending-owner", "stated 1.8; film 24 gives " + eli3.fullnessDisplay + " (outside ±0.1); film 22 gives " + eli3film22.fullnessDisplay + " (difference 0.1). S-Wave fullness is the result of film and pitch, not a free input. Stated fullness is compared and warned, not used to reprice.");
+const b01 = custB(5.5, 2.58, "single-right", 24, 2);
+const b02 = custB(4.83, 2.33, "double", 24, 2);
+const b03 = custB(3.79, 2.33, "single-left", 24, 1.8);
+const b03film22 = custB(3.79, 2.33, "single-left", 22, 1.8);
+record("AC-B-01 fullness", Math.abs(b01.fullnessDisplay - 2) <= 0.1 + 1e-9 ? "pass" : "fail", "display " + b01.fullnessDisplay + " stated 2.0");
+record("AC-B-02 fullness", Math.abs(b02.fullnessDisplay - 2) <= 0.1 + 1e-9 ? "pass" : "fail", "display " + b02.fullnessDisplay + " stated 2.0");
+record("AC-B-03 fullness", "pending-owner", "stated 1.8; film 24 gives " + b03.fullnessDisplay + " (outside ±0.1); film 22 gives " + b03film22.fullnessDisplay + " (difference 0.1). S-Wave fullness is the result of film and pitch, not a free input. Stated fullness is compared and warned, not used to reprice.");
 
 const pinch = LQ.computeWindow({
   name: "W", headingFamily: "pinch", pinchStyle: "double-pinch", orientation: "fixed-height", lining: "none",
@@ -95,7 +95,7 @@ const pinch = LQ.computeWindow({
 const runnerTotal = pinch.runnersPerPanel.reduce((sum, count) => sum + count, 0);
 record("non-S-Wave 1:1 per panel", pinch.runnersPerPanel.every((count, index) => count === pinch.panels[index].count) && runnerTotal === pinch.totalCount && pinch.makingHooksPerPanel[0] === pinch.panels[0].count + 2 ? "pass" : "fail", "runners/panel " + pinch.runnersPerPanel.join("+") + " total " + runnerTotal + "; making hooks stay folds+2 and are not the priced runner count");
 
-const notRunnable = ["AC-KEV-01", "AC-KEV-02", "AC-KEV-03", "AC-POL-01", "AC-REG-01", "AC-REG-02", "AC-MC-01", "AC-MC-02", "AC-MC-03", "AC-MC-04", "AC-CP-01", "AC-CP-02", "AC-CP-03", "AC-NB-01", "AC-NB-02", "AC-NB-03"];
+const notRunnable = ["AC-C-01", "AC-C-02", "AC-C-03", "AC-D-01", "AC-E-01", "AC-E-02", "AC-F-01", "AC-F-02", "AC-F-03", "AC-F-04", "AC-G-01", "AC-G-02", "AC-G-03", "AC-H-01", "AC-H-02", "AC-H-03"];
 notRunnable.forEach((id) => record(id, "not-runnable", "no window dimensions on the source order"));
 
 const counts = verdicts.reduce((acc, row) => { acc[row.status] = (acc[row.status] || 0) + 1; return acc; }, {});
