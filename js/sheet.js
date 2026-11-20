@@ -76,21 +76,25 @@
     if (!factory) html += row(LQ.CUT_FABRIC_LABEL, (fabric.fabricPriceCnyPerM == null ? "—" : money(fabric.fabricPriceCnyPerM) + "/m") + " · not included in the curtain total / 不计入窗帘合计");
     if (!factory) html += row(LQ.DEFAULTS_NOTE, "Hem " + esc(input.hem || "8+2") + " · return " + esc(input.returnCm) + " cm · overlap " + esc(input.overlapCm) + " cm · fullness " + Number(result.fullnessDisplay).toFixed(1) + "x · runners/panel " + (result.runnersPerPanel || []).join(", "));
     if (input.fabricSource === "com" || (fabric && fabric.source === "com")) html += "<p class='note'>" + esc(LQ.COM_NOTE) + "</p>";
-    html += row(sheetEnglish ? "Count" : "Count / 褶·环·滑轮", esc(countLine(result)));
-    if (result.runnersPerPanel) {
+    const knife = result.calcRule === "knife-multiplier";
+    if (!knife) html += row(sheetEnglish ? "Count" : "Count / 褶·环·滑轮", esc(countLine(result)));
+    if (!knife && result.runnersPerPanel && result.runnersPerPanel.every((count) => count != null)) {
       const runnerTotal = result.runnersPerPanel.reduce((sum, count) => sum + Number(count || 0), 0);
       html += row(sheetEnglish ? "Runners" : "Runners / 滑车", result.runnersPerPanel.join(" · ") + " per panel · total " + runnerTotal + (result.runnerOverride ? " · OVERRIDDEN / 客户改数" : ""));
     }
-    html += row(sheetEnglish ? "Film spec" : "Film spec / 纸膜", (result.fabricPerPleat || "") + " cm");
-    if (result.makingHooksPerPanel && result.makingHooksPerPanel.some((count) => count != null)) html += row(sheetEnglish ? "Making hooks (folds + 2, not priced)" : "Making hooks / 制作钩数（褶+2，不计价）", result.makingHooksPerPanel.join(" · "));
+    html += row(sheetEnglish ? "Film spec" : "Film spec / 纸膜", (result.fabricPerPleat || "—") + (result.fabricPerPleat ? " cm" + (knife ? " · reference " + result.knifeMultiplier + "×" : "") : ""));
+    if (knife) html += row(sheetEnglish ? "Side hem allowance" : "Side hem allowance / 左右边缝", "+15 cm per panel / 每片 +15 厘米");
+    if (factory && result.makingHooksPerPanel && result.makingHooksPerPanel.some((count) => count != null)) html += row(sheetEnglish ? "Making hooks (folds + 2, not priced)" : "Making hooks / 制作钩数（褶+2，不计价）", result.makingHooksPerPanel.join(" · "));
+    if (input.hookHeight) html += row(sheetEnglish ? "Hook Height / 上冒" : "Hook Height / 上冒", esc(input.hookHeight) + (String(input.hookHeight).match(/mm|cm|毫米|厘米/i) ? "" : " " + esc(input.hookHeightUnit || "mm")));
+    if (input.hookSpec) html += row(sheetEnglish ? "Hook spec / 钩子规格" : "Hook spec / 钩子规格", esc(input.hookSpec));
     html += row(sheetEnglish ? "Cut width" : "Cut width / 裁宽", result.cutWidthCm + " cm");
-    html += row(sheetEnglish ? "Fullness" : "Fullness / 丰满度", Number(result.fullnessDisplay).toFixed(1) + "x");
+    html += row(sheetEnglish ? "Fullness (actual) = usage ÷ finished width" : "Fullness (actual) = usage ÷ finished width / 实际丰满度", Number(result.fullnessDisplay).toFixed(1) + (result.nominalFullness ? " · reference " + result.nominalFullness + "×" : ""));
     html += row(sheetEnglish ? "Fabric usage" : "Fabric usage / 用料", result.usageMetersPerPiece + " m × " + esc(input.quantity) + " = " + result.usageMetersPriced + " m");
     if (!factory) {
       const com = input.fabricSource === "com" || result.pricing.priceQuoted === false;
       html += row(sheetEnglish ? "Curtain making" : "Curtain making / 窗帘加工", com ? "Processing fee: to be quoted / 加工费待报价" : money(result.pricing.curtainCny));
       html += row(sheetEnglish ? "Lining" : "Lining / 里布费", result.lining && result.lining.id !== "none" ? money(result.pricing.liningCny) : money(0));
-      html += row(sheetEnglish ? "Track / hardware" : "Track / hardware / 轨道五金", money((result.pricing.trackCny || 0) + (result.pricing.motorCny || 0) + (result.pricing.tiebackCny || 0)) + " · " + esc(LQ.ESTIMATE_MARK));
+      html += row(sheetEnglish ? "Track / hardware" : "Track / hardware / 轨道五金", money((result.pricing.trackCny || 0) + (result.pricing.motorCny || 0) + (result.pricing.tiebackCny || 0)) + " · " + esc(LQ.REFERENCE_MARK));
       html += row(sheetEnglish ? "Line" : "Line / 行金额", money(result.pricing.lineCny));
     }
     html += "</table>";
@@ -117,7 +121,7 @@
     html += "<p>" + esc(order.freightNote || LQ.FREIGHT_NOTE) + " · " + money(freight) + "</p>";
     html += "<p style='font-size:18px'><b>Total CNY " + money(order.cnyTotal) + "</b></p>";
     if (order.settlement && order.settlement.foreign != null) {
-      html += "<p class='estimate'>" + esc(LQ.ESTIMATE_MARK) + "</p><p>" + esc(fx(order.settlement.foreign, order.currency)) + " · 1 " + esc(order.currency) + " = " + order.settlement.rateCny + " CNY · " + esc(order.settlement.rateDate || "") + "</p>";
+      html += "<p class='estimate'>" + esc(LQ.REFERENCE_MARK) + "</p><p>" + esc(fx(order.settlement.foreign, order.currency)) + " · 1 " + esc(order.currency) + " = " + order.settlement.rateCny + " CNY · " + esc(order.settlement.rateDate || "") + "</p><p class='note'>Reference only, final at BOC rate on remittance day</p>";
     }
     if (order.currency !== "CNY") html += "<p class='note'>" + esc(LQ.FX_NOTE) + "</p>";
     return html;
@@ -185,8 +189,12 @@
         lines.push("Lining: " + input.lining + " usage m: " + result.lining.usageMeters + " per piece, " + result.lining.usageMetersPriced + " priced, fee CNY: " + result.lining.cny + " (" + result.lining.usageMetersPriced + " m x " + result.lining.rate + ")");
       }
       lines.push("Qty: " + input.quantity);
-      lines.push("Pleats/folds/rings: " + result.totalCount + "  Gliders: " + (result.totalGliders ?? "—") + "  Hooks: " + (result.totalHooks ?? "—") + "  Rings: " + (result.totalRings ?? "—"));
-      lines.push("Cut width cm: " + result.cutWidthCm + "  Fullness: " + result.fullnessDisplay + "x");
+      if (result.calcRule === "knife-multiplier") lines.push("Knife Pleat: no runner or hook count. Reference " + result.knifeMultiplier + "×. Side hem +15 cm per panel.");
+      else lines.push("Pleats/folds/rings: " + result.totalCount + "  Gliders: " + (result.totalGliders ?? "—") + "  Runners per panel: " + (result.runnersPerPanel || []).join(", "));
+      if (input.hookHeight) lines.push("Hook Height / 上冒: " + input.hookHeight + " " + (String(input.hookHeight).match(/mm|cm|毫米|厘米/i) ? "" : (input.hookHeightUnit || "mm")));
+      if (input.hookSpec) lines.push("Hook spec / 钩子规格: " + input.hookSpec);
+      lines.push("Cut width cm: " + result.cutWidthCm + "  Fullness (actual) = usage ÷ finished width: " + result.fullnessDisplay);
+      lines.push("Film cm: " + (result.fabricPerPleat || "—"));
       lines.push("Fabric usage m (priced): " + result.usageMetersPriced + " (" + result.usageMetersPerPiece + " per piece, " + result.usageBasis + ")");
       lines.push("Curtain CNY: " + result.pricing.curtainCny + "  Lining: " + result.pricing.liningCny + "  Track: " + result.pricing.trackCny + " " + LQ.ESTIMATE_MARK + "  Motor: " + result.pricing.motorCny + " " + LQ.ESTIMATE_MARK + "  Line: " + result.pricing.lineCny);
       (result.warnings || []).forEach((warning) => lines.push("WARNING: " + warning.en + " / " + warning.zh));

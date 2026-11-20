@@ -73,7 +73,7 @@ const com = LQ.computeWindow({
 }, null, rules, prices);
 check("COM is quoted not priced", com.warnings.some((warning) => warning.code === "com-quote") && com.pricing.curtainCny === 0 && com.pricing.priceQuoted === false);
 const rates = JSON.parse(fs.readFileSync(path.join(root, "data/rates.json"), "utf8"));
-check("CAD placeholder", rates.rates.some((rate) => rate.currency === "CAD" && rate.placeholder === true));
+check("CAD is a dated Bank of China rate", rates.rates.some((rate) => rate.currency === "CAD" && rate.placeholder === false && rate.basis === "中行折算价" && rate.rateCny === 4.6671));
 check("courier default list", LQ.DEFAULT_RULES.shippingMethods[0].id === "fedex" && LQ.DEFAULT_RULES.shippingMethods.some((method) => method.id === "sea"));
 const order = {
   number: "LQ-TEST", createdAt: "2026-11-20", currency: "CAD", freightCny: 0, freightNote: LQ.FREIGHT_NOTE,

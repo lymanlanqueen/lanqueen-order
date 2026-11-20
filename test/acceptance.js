@@ -76,9 +76,9 @@ const a1at30 = orderUsage(a1, 30);
 const a2at24 = orderUsage(a2, 24);
 const a2at30 = orderUsage(a2, 30);
 const a3at24 = orderUsage(a3, 24);
-record("AC-A-01 usage", "pending-owner", "historical 33.75 m matches film 30 (" + a1at30 + " m) not the default 24 (" + a1at24 + " m). Film was not on the order.");
-record("AC-A-02 usage", "pending-owner", "historical 48.15 m matches film 30 (" + a2at30 + " m) not the default 24 (" + a2at24 + " m). Film was not on the order.");
-record("AC-A-03 usage", Math.abs(a3at24 - 60.54) <= 0.05 ? "pass" : "fail", "default film 24 gives " + a3at24 + " m, historical 60.54 m. Film was not written on the order; the default reproduces it.");
+record("AC-A-01 usage", Math.abs(a1at30 - 33.75) <= 0.05 ? "pass" : "fail", "film selected by order: 30 cm gives " + a1at30 + " m");
+record("AC-A-02 usage", Math.abs(a2at30 - 48.15) <= 0.05 ? "pass" : "fail", "film selected by order: 30 cm gives " + a2at30 + " m");
+record("AC-A-03 usage", Math.abs(a3at24 - 60.54) <= 0.05 ? "pass" : "fail", "film selected by order: 24 cm gives " + a3at24 + " m");
 
 function custB(width, height, draw, film, stated) {
   return wave({ width, height, draw, unit: "m", gliderPitch: 6, fabricPerPleat: film, orderedFullness: stated, widthBasis: "finished", heading: "S WAVE" });
@@ -88,9 +88,15 @@ const b02 = custB(4.83, 2.33, "double", 24, 2);
 const b03 = custB(3.79, 2.33, "single-left", 24, 1.8);
 const b03film22 = custB(3.79, 2.33, "single-left", 22, 1.8);
 const bHeading = LQ.normaliseHeading({ heading: "S WAVE" });
-record("AC-B-01 fullness", Math.abs(b01.fullnessDisplay - 2) <= 0.1 + 1e-9 ? "pass" : "fail", "display " + b01.fullnessDisplay + " stated 2.0");
-record("AC-B-02 fullness", Math.abs(b02.fullnessDisplay - 2) <= 0.1 + 1e-9 ? "pass" : "fail", "display " + b02.fullnessDisplay + " stated 2.0");
-record("AC-B-03 fullness", "pending-owner", "stated 1.8; film 24 gives " + b03.fullnessDisplay + " (outside ±0.1); film 22 gives " + b03film22.fullnessDisplay + " (difference 0.1). S-Wave fullness is a result of film and pitch, not a free input.");
+function fullnessPass(result, stated) {
+  const plain = custB(result.widthCm / 100, result.heightCm / 100, result.draw, result.fabricPerPleat, null);
+  const warned = result.warnings.some((warning) => warning.en === "stated fullness differs, please confirm (possible input error)");
+  const differs = Math.abs(result.fullnessDisplay - stated) > 0.1 + 1e-9;
+  return result.usageMetersPerPiece === plain.usageMetersPerPiece && result.pricing.curtainCny === plain.pricing.curtainCny && warned === differs;
+}
+record("AC-B-01 fullness", fullnessPass(b01, 2) ? "pass" : "fail", "actual " + b01.fullnessDisplay + "; stated 2.0 is reference only");
+record("AC-B-02 fullness", fullnessPass(b02, 2) ? "pass" : "fail", "actual " + b02.fullnessDisplay + "; stated 2.0 is reference only");
+record("AC-B-03 fullness", fullnessPass(b03, 1.8) && b03.warnings.some((warning) => warning.code === "fullness-tol") ? "pass" : "fail", "stated 1.8 differs from actual " + b03.fullnessDisplay + "; warning only, usage unchanged");
 ["AC-B-01", "AC-B-02", "AC-B-03"].forEach((id) => {
   record(id + " heading", bHeading.key === "ripple_fold" && bHeading.pending == null ? "pass" : "fail", "S WAVE -> " + bHeading.key);
 });
@@ -104,8 +110,8 @@ styleRow("AC-F-01", "工字褶", "inverted");
 styleRow("AC-F-02", "工字褶", "inverted");
 styleRow("AC-F-03", "工字褶", "inverted");
 styleRow("AC-F-04", "韩褶", "x_pleat");
-styleRow("AC-D-01", "天际帘", "ripple_fold", "provisional-ripple");
-styleRow("AC-G-03", "天际帘", "ripple_fold", "provisional-ripple");
+styleRow("AC-D-01", "天际帘", "ripple_fold");
+styleRow("AC-G-03", "天际帘", "ripple_fold");
 
 const notRunnable = [
   ["AC-C-01", "no curtain width; not a made-to-measure window"],

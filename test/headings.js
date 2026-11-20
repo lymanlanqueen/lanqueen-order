@@ -29,9 +29,11 @@ const official = [
   ["inverted", "Inverted Pleat", "工字褶"],
   ["goblet", "Goblet Pleat", "酒杯褶"],
   ["ripple_fold", "Ripple Fold", "蛇形"],
+  ["evo", "EVO Pleat", "EVO褶 (Inverted Pleat variant)"],
+  ["knife", "Knife Pleat", "刀型褶"],
   ["grommet", "Grommet / Eyelet", "打孔"]
 ];
-check("eight pleats plus grommet", LQ.HEADING_ORDER.join(",") === official.map((row) => row[0]).join(","));
+check("eight pleats plus EVO, Knife and grommet", LQ.HEADING_ORDER.join(",") === official.map((row) => row[0]).join(","));
 official.forEach((row) => {
   const label = LQ.HEADING_LABEL[row[0]];
   check("label " + row[0], label && label.en === row[1] && label.zh === row[2]);
@@ -44,12 +46,12 @@ check("工字褶 is Inverted Pleat", keyOf("工字褶") === "inverted" && keyOf(
 ["S-Wave", "S Wave", "S WAVE", "SWave", "S-Fold", "S Fold"].forEach((alias) => {
   check(alias + " is Ripple Fold", keyOf(alias) === "ripple_fold" && LQ.normaliseHeading({ heading: alias }).pending == null);
 });
-const sky = LQ.normaliseHeading({ heading: "天际帘" });
-check("天际帘 provisionally selects Ripple Fold", sky.key === "ripple_fold" && sky.rule === "ripple" && sky.pending === "provisional-ripple");
-const skyNote = LQ.normaliseHeading({ heading: "天际帘（工序备注）" });
-check("天际帘 inside a note still selects Ripple Fold", skyNote.key === "ripple_fold" && skyNote.pending === "provisional-ripple");
+const sky = LQ.normaliseHeading({ heading: "天 际 帘" });
+check("天际帘 is Ripple Fold", sky.key === "ripple_fold" && sky.pending == null);
+check("鸡目环 is grommet", keyOf("鸡目环") === "grommet" && keyOf("鸡 目 环") === "grommet");
+check("knife aliases", keyOf("刀型褶") === "knife" && keyOf("刀褶") === "knife" && keyOf("Knife pleat") === "knife");
 check("legacy pinch styles", keyOf("double-pinch") === "double_pinch" && keyOf("triple-pinch") === "triple_pinch" && keyOf("euro-double") === "euro_double" && keyOf("euro-triple") === "euro_triple" && keyOf("x-pleat") === "x_pleat" && keyOf("goblet") === "goblet");
-check("EVO keeps the inverted rule", LQ.normaliseHeading({ pinchStyle: "evo" }).key === "inverted" && LQ.normaliseHeading({ pinchStyle: "evo" }).extraPleat === true);
+check("EVO is its own heading", LQ.normaliseHeading({ heading: "EVO" }).key === "evo" && LQ.normaliseHeading({ heading: "EVO" }).extraPleat === true);
 check("eyelet is grommet", keyOf("eyelet") === "grommet" && LQ.normaliseHeading({ headingFamily: "grommet" }).key === "grommet");
 const bare = LQ.normaliseHeading({ headingFamily: "pinch" });
 check("bare pinch is not double pinch", bare.key === null && bare.pending === "bare-pinch");
@@ -67,17 +69,36 @@ const shared = run({ heading: "double_pinch" });
   check(key + " uses the shared pleat rule", result.calcRule === "pleat-shared" && result.totalCount === shared.totalCount && result.pureFabricCm === shared.pureFabricCm && result.fabricPerPleat === 24 && result.runnersPerPanel[0] === result.panels[0].count);
 });
 const inverted = run({ heading: "inverted" });
-check("inverted keeps the existing plus-one pleat", inverted.calcRule === "pleat-plus-1" && inverted.totalCount === shared.totalCount + 1 && inverted.runnersPerPanel[0] === inverted.panels[0].count);
-const evo = run({ headingFamily: "pinch", pinchStyle: "evo" });
-check("EVO count matches inverted", evo.totalCount === inverted.totalCount && evo.heading.key === "inverted");
+check("inverted extra fold changes usage only", inverted.calcRule === "pleat-plus-1" && inverted.totalCount === shared.totalCount + 1 && inverted.runnersPerPanel[0] === shared.runnersPerPanel[0]);
+const evo = run({ heading: "evo" });
+check("EVO matches inverted usage and not its runner count", evo.totalCount === inverted.totalCount && evo.runnersPerPanel[0] === inverted.runnersPerPanel[0] && evo.heading.key === "evo");
 const ripple = run({ heading: "ripple_fold" });
 check("ripple stays 2:1", ripple.calcRule === "ripple-2to1" && ripple.runnersPerPanel[0] === ripple.panels[0].count * 2);
 const grommet = run({ heading: "grommet", fabricPerPleat: 22 });
 check("grommet rule unchanged", grommet.calcRule === "grommet" && grommet.fabricPerPleat === 30 && grommet.totalRings === grommet.totalCount * 2);
 const bareResult = run({ headingFamily: "pinch" });
 check("bare pinch is flagged", bareResult.heading.key === null && bareResult.errors.some((error) => error.code === "pinch"));
-const knife = run({ headingFamily: "knife" });
-check("knife is pending and not renamed", knife.heading.key === null && knife.heading.pending === "knife" && knife.warnings.some((warning) => warning.code === "heading-pending") && knife.totalCount === shared.totalCount && knife.calcRule === "knife-same-count-as-double-pinch");
+function knifeAt(film) {
+  return LQ.computeWindow({
+    name: "W", heading: "knife", orientation: "fixed-height", lining: "none", topFinish: "none",
+    width: 2, height: 2.6, unit: "m", fabricPerPleat: film, draw: "single-left", hem: "8+2",
+    returnCm: 5, overlapCm: 5, tieback: "none", hardware: "customer", quantity: 1, widthBasis: "finished"
+  }, face, rules, prices);
+}
+const knife22 = knifeAt(22);
+const knife30 = knifeAt(30);
+check("knife 2.2x uses 4.55 m", knife22.usageMetersPerPiece === 4.55 && knife22.pureFabricCm === 440 && knife22.allowanceCm === 15 && knife22.runnersPerPanel[0] == null && knife22.panels[0].hooks == null && !knife22.warnings.some((warning) => warning.code === "knife-pending"));
+check("knife 3.0x uses 6.15 m", knife30.usageMetersPerPiece === 6.15 && knife30.knifeMultiplier === 3);
+check("knife rejects 24 cm", knifeAt(24).errors.some((error) => error.code === "fpp"));
+check("knife actual fullness is usage over width", knife22.fullnessDisplay === Math.round((knife22.usageMetersPerPiece / 2) * 10) / 10);
+const noted = run({ heading: "double_pinch", remarks: "80钩 / 89钩", hookSpec: "89钩", hookHeight: "35mm" });
+const quiet = run({ heading: "double_pinch" });
+check("hook spec and notes do not change runners or price", noted.runnersPerPanel.join() === quiet.runnersPerPanel.join() && noted.usageMetersPerPiece === quiet.usageMetersPerPiece && noted.pricing.curtainCny === quiet.pricing.curtainCny && noted.hookHeightMm === 35 && noted.hookSpec === "89钩");
+const pasted = LQ.parsePaste("Location\tWidth\tHeight\tUnit\tDraw\tModel\tColour No.\tWidth basis\tQuantity\tHook Height\tHook spec\nRoom\t2\t2.6\tm\tdouble\tMasal\t\t\t2\t3.5cm\t80钩", { catalog, orderWidthBasis: "track", orderFilm: "24" });
+check("paste columns keep quantity and do not treat 80钩 as a count", pasted.errors.length === 0 && pasted.rows[0].quantity === "2" && pasted.rows[0].widthBasis === "track" && pasted.rows[0].hookSpec === "80钩" && pasted.rows[0].hookHeight === "3.5cm" && pasted.rows.length === 1);
+const versionOnly = LQ.matchModel(catalog, "F01");
+check("version code is not a model", versionOnly.status === "version" && versionOnly.en === "use the fabric model name, e.g. Masal");
+check("model match ignores case and hyphens", LQ.matchModel(catalog, "masal").status === "ok");
 const summary = LQ.headingSummary({ heading: "x_pleat" });
 check("summary uses the chart", summary.en === "X-Pleat" && summary.zh === "交叉褶（十字褶）");
 const rippleName = LQ.headingSummary({ heading: "ripple_fold", rippleTape: "rivet" });

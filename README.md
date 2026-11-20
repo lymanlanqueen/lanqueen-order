@@ -23,4 +23,6 @@ The curtain total is finished RMB per metre × fabric usage. 散剪面料价 Cut
 
 `node tools/build_catalog.js` rebuilds `data/catalog.json` from `tools/pricelist_full.txt`. `npm test` runs the order checks.
 
+Preview this branch without GitHub Pages: https://raw.githack.com/lymanlanqueen/lanqueen-order/fix/step1-step2/index.html
+
 Do not run a build. `js/lq.js` is already the same calculation module as the studio app.

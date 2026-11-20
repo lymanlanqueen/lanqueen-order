@@ -72,7 +72,7 @@ function ref(c) {
     usageCm = drops * cutDrop;
   }
   return {
-    pleats, runners, pure, cut, full: W > 0 ? round1(pure / W) : 0,
+    pleats, runners, pure, cut, full: W > 0 ? round1((+roundCm(usageCm) / 100) / (W / 100)) : 0,
     usageM: +roundCm(usageCm) / 100, drops
   };
 }

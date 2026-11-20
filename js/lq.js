@@ -55,8 +55,14 @@ var LQ = (() => {
     COM_NOTE: () => COM_NOTE,
     DEFAULTS_NOTE: () => DEFAULTS_NOTE,
     FREIGHT_NOTE: () => FREIGHT_NOTE,
+    PASTE_COLUMNS: () => PASTE_COLUMNS,
+    REFERENCE_MARK: () => REFERENCE_MARK,
+    WIZARD_STEP_FIELDS: () => WIZARD_STEP_FIELDS,
     findFabric: () => findFabric,
+    matchModel: () => matchModel,
     normaliseDraw: () => normaliseDraw,
+    parseHookHeight: () => parseHookHeight,
+    parsePaste: () => parsePaste,
     parseDecimal: () => parseDecimal,
     recomputeOrder: () => recomputeOrder,
     resolveFabric: () => resolveFabric,
@@ -140,70 +146,75 @@ var LQ = (() => {
     inverted: { en: "Inverted Pleat", zh: "\u5DE5\u5B57\u8936", rule: "pleat", extraPleat: true },
     goblet: { en: "Goblet Pleat", zh: "\u9152\u676F\u8936", rule: "pleat", extraPleat: false },
     ripple_fold: { en: "Ripple Fold", zh: "\u86C7\u5F62", rule: "ripple", extraPleat: false },
+    evo: { en: "EVO Pleat", zh: "EVO\u8936 (Inverted Pleat variant)", rule: "pleat", extraPleat: true },
+    knife: { en: "Knife Pleat", zh: "\u5200\u578B\u8936", rule: "knife", extraPleat: false },
     grommet: { en: "Grommet / Eyelet", zh: "\u6253\u5B54", rule: "grommet", extraPleat: false }
   };
-  var HEADING_ORDER = ["x_pleat", "double_pinch", "triple_pinch", "euro_double", "euro_triple", "inverted", "goblet", "ripple_fold", "grommet"];
+  var HEADING_ORDER = ["x_pleat", "double_pinch", "triple_pinch", "euro_double", "euro_triple", "inverted", "goblet", "ripple_fold", "evo", "knife", "grommet"];
   var HEADING_ALIAS = {
-    "x pleat": "x_pleat",
     xpleat: "x_pleat",
     "\u4EA4\u53C9\u8936": "x_pleat",
     "\u5341\u5B57\u8936": "x_pleat",
-    "\u4EA4\u53C9\u8936 \u5341\u5B57\u8936": "x_pleat",
+    "\u4EA4\u53C9\u8936\u5341\u5B57\u8936": "x_pleat",
     "\u97E9\u8936": "x_pleat",
     "\u97E9\u6298": "x_pleat",
-    "korean pleat": "x_pleat",
-    "double pinch": "double_pinch",
-    "double pinch pleat": "double_pinch",
+    koreanpleat: "x_pleat",
+    doublepinch: "double_pinch",
+    doublepinchpleat: "double_pinch",
     "\u53CC\u8936": "double_pinch",
-    "two finger": "double_pinch",
-    "triple pinch": "triple_pinch",
-    "triple pinch pleat": "triple_pinch",
+    twofinger: "double_pinch",
+    triplepinch: "triple_pinch",
+    triplepinchpleat: "triple_pinch",
     "\u4E09\u8936": "triple_pinch",
-    "three finger": "triple_pinch",
-    "euro double": "euro_double",
-    "euro double pleat": "euro_double",
+    threefinger: "triple_pinch",
+    eurodouble: "euro_double",
+    eurodoublepleat: "euro_double",
     "\u6B27\u5F0F\u53CC\u8936": "euro_double",
-    "euro triple": "euro_triple",
-    "euro triple pleat": "euro_triple",
+    eurotriple: "euro_triple",
+    eurotriplepleat: "euro_triple",
     "\u6B27\u5F0F\u4E09\u8936": "euro_triple",
     inverted: "inverted",
-    "inverted pleat": "inverted",
+    invertedpleat: "inverted",
     "\u5DE5\u5B57\u8936": "inverted",
     "\u5012\u7F6E\u5DE5\u5B57\u8936": "inverted",
-    "box pleat": "inverted",
+    boxpleat: "inverted",
     goblet: "goblet",
-    "goblet pleat": "goblet",
+    gobletpleat: "goblet",
     "\u9152\u676F\u8936": "goblet",
     "\u676F\u72B6\u8936": "goblet",
     ripple: "ripple_fold",
-    "ripple fold": "ripple_fold",
-    "s wave": "ripple_fold",
+    ripplefold: "ripple_fold",
     swave: "ripple_fold",
-    "s fold": "ripple_fold",
     sfold: "ripple_fold",
     "\u86C7\u5F62": "ripple_fold",
     "\u86C7\u5F62\u5E18": "ripple_fold",
     "\u5929\u9645\u5E18": "ripple_fold",
     grommet: "grommet",
+    grommeteyelet: "grommet",
     eyelet: "grommet",
     eyelets: "grommet",
     "\u6253\u5B54": "grommet",
-    evo: "inverted"
+    "\u9E21\u76EE\u73AF": "grommet",
+    evo: "evo",
+    knife: "knife",
+    knifepleat: "knife",
+    "\u5200\u8936": "knife",
+    "\u5200\u578B\u8936": "knife"
   };
   function headingToken(value) {
-    return String(value || "").trim().toLowerCase().replace(/[()（）]/g, " ").replace(/[_/·,.-]+/g, " ").replace(/\s+/g, " ").trim();
+    return String(value || "").replace(/[\s\u3000\u00A0]+/g, "").replace(/[()（）【】\[\]{}，,。．.、·・/\\_\-—–~～'"`]+/g, "").toLowerCase();
   }
   function classifyHeading(value) {
     if (value == null || String(value).trim() === "") return { type: "empty" };
     if (HEADING_LABEL[value]) return { type: "key", key: value, source: String(value) };
     const token = headingToken(value);
     const raw = String(value);
-    const provisional = token === "\u5929\u9645\u5E18" || raw.indexOf("\u5929\u9645\u5E18") !== -1;
-    if (HEADING_ALIAS[token]) return { type: "key", key: HEADING_ALIAS[token], source: raw, provisional: provisional };
-    if (provisional) return { type: "key", key: "ripple_fold", source: raw, provisional: true };
-    if (token === "pinch" || token === "pinch pleat" || token === "\u634F\u8936") return { type: "bare-pinch" };
-    if (token === "knife" || token === "knife pleat" || token === "\u5200\u8936") return { type: "knife" };
-    return { type: "unknown", source: String(value) };
+    if (!token) return { type: "empty" };
+    if (HEADING_ALIAS[token]) return { type: "key", key: HEADING_ALIAS[token], source: raw };
+    if (token.indexOf("\u5929\u9645\u5E18") !== -1) return { type: "key", key: "ripple_fold", source: raw };
+    if (token.indexOf("\u9E21\u76EE\u73AF") !== -1) return { type: "key", key: "grommet", source: raw };
+    if (token === "pinch" || token === "pinchpleat" || token === "\u634F\u8936") return { type: "bare-pinch" };
+    return { type: "unknown", source: raw };
   }
   function normaliseHeading(input) {
     const source = input || {};
@@ -213,10 +224,8 @@ var LQ = (() => {
     const picked = fromHeading.type === "key" ? fromHeading : fromStyle.type === "key" ? fromStyle : fromFamily.type === "key" ? fromFamily : null;
     if (picked) {
       const spec = HEADING_LABEL[picked.key];
-      return { key: picked.key, en: spec.en, zh: spec.zh, rule: spec.rule, extraPleat: !!spec.extraPleat, pending: picked.provisional ? "provisional-ripple" : null, source: picked.source };
+      return { key: picked.key, en: spec.en, zh: spec.zh, rule: spec.rule, extraPleat: !!spec.extraPleat, pending: null, source: picked.source };
     }
-    const knife = fromHeading.type === "knife" || fromStyle.type === "knife" || fromFamily.type === "knife";
-    if (knife) return { key: null, en: "Knife pleat", zh: "\u5200\u8936", rule: "pleat", extraPleat: false, pending: "knife", source: "knife" };
     const bare = fromHeading.type === "bare-pinch" || fromFamily.type === "bare-pinch" || fromStyle.type === "bare-pinch";
     if (bare) return { key: null, en: null, zh: null, rule: "pleat", extraPleat: false, pending: "bare-pinch", source: source.heading || source.headingFamily || "pinch" };
     return { key: null, en: null, zh: null, rule: null, extraPleat: false, pending: "unknown", source: String(source.heading || source.pinchStyle || source.headingFamily || "") };
@@ -262,12 +271,102 @@ var LQ = (() => {
     const toUnit = unit === "mm" ? 1000 : unit === "cm" ? 100 : unit === "in" ? 1 / 0.0254 : unit === "yd" ? 1 / 0.9144 : 1;
     return { min: formatLimit(rangeM.min * toUnit), max: formatLimit(rangeM.max * toUnit), toUnit };
   }
-  var FREIGHT_NOTE = "Estimated freight, settled at actual cost / \u9884\u4F30\u8FD0\u8D39\uFF0C\u6309\u5B9E\u7ED3\u7B97";
+  var FREIGHT_NOTE = "Freight to be quoted / \u8FD0\u8D39\u53E6\u884C\u62A5\u4EF7";
   var DEFAULTS_NOTE = "Defaults applied, please confirm";
   var COM_NOTE = "Ship fabric after order confirmation; label parcel with order no. + location; lead time starts after fabric inspection; shortage/defects are the sender's responsibility.";
+  function modelKey(value) {
+    return String(value || "").trim().toLowerCase().replace(/[\s\u3000\u00A0_\-]+/g, "");
+  }
+  function matchModel(list, query) {
+    const key = modelKey(query);
+    if (!key) return { status: "empty" };
+    const models = list || [];
+    const hits = models.filter((item) => modelKey(item.model) === key || modelKey(item.id) === key);
+    if (hits.length === 1) return { status: "ok", entry: hits[0] };
+    if (hits.length > 1) return { status: "ambiguous" };
+    const versions = models.filter((item) => modelKey(item.version) === key);
+    if (versions.length) return { status: "version", en: "use the fabric model name, e.g. Masal", zh: "\u8BF7\u586B\u5199\u9762\u6599\u578B\u53F7\uFF0C\u4F8B\u5982 Masal" };
+    return { status: "missing" };
+  }
   function findFabric(list, model, colorNumber) {
-    const row = (list || []).find((item) => item.model === model);
-    return resolveFabric(row, colorNumber);
+    const matched = matchModel(list, model);
+    if (!matched || matched.status !== "ok") return null;
+    return resolveFabric(matched.entry, colorNumber);
+  }
+  function parseHookHeight(value, unit) {
+    if (value == null || value === "") return { mm: null, entered: "" };
+    const text = String(value).trim();
+    const matched = text.match(/^([+-]?(?:\d+(?:[.,]\d+)?|\.\d+))\s*(mm|cm|\u6BEB\u7C73|\u5398\u7C73)?$/i);
+    if (!matched) return { mm: null, entered: text };
+    const n = parseDecimal(matched[1]);
+    if (!Number.isFinite(n)) return { mm: null, entered: text };
+    const chosen = String(matched[2] || unit || "mm").toLowerCase();
+    const mm = chosen === "cm" || chosen === "\u5398\u7C73" ? Math.round(n * 1000) / 100 : n;
+    return { mm, entered: text };
+  }
+  var PASTE_COLUMNS = [
+    { key: "location", header: "Location" },
+    { key: "width", header: "Width" },
+    { key: "height", header: "Height" },
+    { key: "unit", header: "Unit" },
+    { key: "draw", header: "Draw" },
+    { key: "model", header: "Model" },
+    { key: "colourNo", header: "Colour No." },
+    { key: "widthBasis", header: "Width basis" },
+    { key: "quantity", header: "Quantity" },
+    { key: "hookHeight", header: "Hook Height" },
+    { key: "hookSpec", header: "Hook spec" }
+  ];
+  var WIZARD_STEP_FIELDS = [
+    ["name", "fabricId", "colorNumber", "quantity"],
+    ["width", "height", "unit", "widthBasis"],
+    ["heading"],
+    ["draw"],
+    ["fabricPerPleat"],
+    ["hem"],
+    ["return", "overlap"],
+    ["tieback", "hardware"]
+  ];
+  function normaliseBasis(value) {
+    const text = String(value || "").trim().toLowerCase();
+    if (text === "track" || text === "\u8F68\u9053" || text === "\u8F68\u9053\u5BBD") return "track";
+    if (text === "finished" || text === "\u6210\u54C1" || text === "\u6210\u54C1\u5BBD") return "finished";
+    return "";
+  }
+  function parsePaste(text, options) {
+    const opts = options || {};
+    const header = PASTE_COLUMNS.map((column) => column.header).join("\t");
+    const example = "Living room\t2.4\t2.6\tm\tdouble\tMasal\t\ttrack\t1\t35mm\t89\u94A9";
+    const errors = [];
+    if (opts.orderWidthBasis !== "track" && opts.orderWidthBasis !== "finished") {
+      errors.push({ code: "order-width-basis", en: "Choose Track or Finished width for the order before pasting.", zh: "\u7C98\u8D34\u524D\u8BF7\u5148\u9009\u62E9\u6574\u5355\u7684\u8F68\u9053\u5BBD\u6216\u6210\u54C1\u5BBD\u3002" });
+      return { rows: [], errors, header, example };
+    }
+    const rows = [];
+    String(text || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((line) => {
+      const cells = line.split("\t");
+      if (String(cells[0] || "").trim().toLowerCase() === "location") return;
+      const get = (index) => cells[index] == null ? "" : String(cells[index]).trim();
+      const modelText = get(5);
+      const matched = matchModel(opts.catalog || [], modelText);
+      rows.push({
+        location: get(0),
+        name: get(0) || "Window",
+        width: get(1),
+        height: get(2),
+        unit: get(3) || "mm",
+        draw: normaliseDraw(get(4) || "double"),
+        fabricId: matched.status === "ok" ? matched.entry.id : (matched.status === "version" ? "" : modelText),
+        modelError: matched.status === "version" ? matched.en : "",
+        colorNumber: get(6),
+        widthBasis: normaliseBasis(get(7)) || opts.orderWidthBasis,
+        quantity: get(8) || "1",
+        hookHeight: get(9),
+        hookSpec: get(10),
+        fabricPerPleat: opts.orderFilm || ""
+      });
+    });
+    return { rows, errors, header, example };
   }
   function nominalFullness(fabricPerPleat) {
     if (fabricPerPleat === 22) return 1.9;
@@ -296,6 +395,7 @@ var LQ = (() => {
   }
   var CUT_FABRIC_LABEL = "\u6563\u526A\u9762\u6599\u4EF7 Cut Fabric Price";
   var ESTIMATE_MARK = "\u5F85\u786E\u8BA4/\u4F30\u7B97 To be confirmed / estimate";
+  var REFERENCE_MARK = "Reference only / \u53C2\u8003\u4EF7";
   var NOT_A_QUOTE = {
     en: "Hardware prices and exchange rates are placeholders. This is not a formal quote.",
     zh: "\u4E94\u91D1\u4EF7\u683C\u4E0E\u6C47\u7387\u4E3A\u5360\u4F4D\u6570\u636E\uFF0C\u975E\u6B63\u5F0F\u62A5\u4EF7\u3002"
@@ -583,12 +683,15 @@ var LQ = (() => {
       panelWidths = Array.from({ length: panelCount }, () => 0);
     }
     const unequal = split && Math.abs(panelWidths[0] - panelWidths[1]) > 0.05;
+    if (isDouble && !split && widthCm > 0 && !input.equalSplitConfirmed) {
+      warnings.push(msg("equal-split", "Equal split? Enter L/R widths if unequal.", "\u5BF9\u534A\u5F00\uFF1F\u4E0D\u7B49\u5206\u8BF7\u586B\u5199\u5DE6\u53F3\u5BBD\u3002", "leftWidth"));
+    }
     const panelWidthCm = panelWidths[0] || 0;
     const heightCm = unitOk && Number.isFinite(heightValue) ? toCm(heightValue, input.unit) : 0;
     const heading = normaliseHeading(input);
-    const family = heading.rule === "grommet" ? "grommet" : heading.rule === "ripple" ? "ripple" : heading.rule === "pleat" ? (heading.pending === "knife" ? "knife" : "pinch") : (input.headingFamily || "");
+    const family = heading.rule === "grommet" ? "grommet" : heading.rule === "ripple" ? "ripple" : heading.rule === "knife" ? "knife" : heading.rule === "pleat" ? "pinch" : (input.headingFamily || "");
     const fabricPerPleat = family === "grommet" ? rules.grommetFabricPerPleat : Number(input.fabricPerPleat);
-    const hookSpacing = family === "ripple" ? null : rules.hookSpacingDefaultCm;
+    const hookSpacing = family === "ripple" || family === "knife" ? null : rules.hookSpacingDefaultCm;
     const pitch = family === "ripple" ? Number(input.gliderPitch ?? 6) : null;
     const hemUsageCm = rules.hemUsageCm[input.hem] ?? 0;
     const topUsageCm = input.topFinish === "fold-8" ? rules.topFoldCm : 0;
@@ -643,20 +746,17 @@ var LQ = (() => {
     if (heading.pending === "bare-pinch") {
       errors.push(msg("pinch", "Choose a heading. Pinch on its own is not a style.", "\u8BF7\u9009\u62E9\u5E18\u5934\u3002\u5355\u72EC\u7684\u634F\u8936\u4E0D\u662F\u4E00\u79CD\u6837\u5F0F\u3002", "heading"));
     }
-    if (heading.pending === "knife") {
-      warnings.push(msg("heading-pending", "Knife pleat is not on the official heading chart. The current fold count is unchanged and matches Double Pinch Pleat, but this row is not renamed. Pending owner rule.", "\u5200\u8936\u4E0D\u5728\u6B63\u5F0F\u5E18\u5934\u8868\u91CC\u3002\u8936\u6570\u4ECD\u7528\u73B0\u5728\u7684\u516C\u5F0F\uFF0C\u4E0E\u53CC\u8936\u76F8\u540C\uFF0C\u4F46\u4E0D\u6539\u540D\u3002\u5F85\u4E1A\u4E3B\u786E\u8BA4\u89C4\u5219\u3002", "heading"));
-    }
-    if (heading.pending === "provisional-ripple") {
-      warnings.push(msg("heading-provisional", "\u5929\u9645\u5E18 is provisionally treated as Ripple Fold. The owner has not confirmed they are the same.", "\u5929\u9645\u5E18\u6682\u6309\u86C7\u5F62 Ripple Fold \u8BA1\u7B97\uFF0C\u4E1A\u4E3B\u5C1A\u672A\u786E\u8BA4\u4E24\u8005\u662F\u5426\u76F8\u540C\u3002", "heading"));
-    }
     if (family === "ripple" && !input.rippleTape) {
       errors.push(msg("tape", "Choose rivet tape or mesh tape.", "\u8BF7\u9009\u62E9\u94C6\u9489\u5E26\u6216\u7F51\u683C\u5E26\u3002", "rippleTape"));
     }
     if (family === "ripple" && (pitch === null || !PITCHES.has(pitch))) {
       errors.push(msg("pitch", "Choose a glider pitch.", "\u8BF7\u9009\u62E9\u6ED1\u8F6E\u95F4\u8DDD\u3002", "gliderPitch"));
     }
-    if (family !== "grommet" && !FOLDS.has(fabricPerPleat)) {
-      errors.push(msg("fpp", "Fabric per pleat must be 22, 24 or 30 cm.", "\u8936\u7528\u6599\u53EA\u80FD\u662F 22\u300124 \u6216 30 \u5398\u7C73\u3002", "fabricPerPleat"));
+    const knifeMultiplier = fabricPerPleat === 22 ? 2.2 : fabricPerPleat === 30 ? 3 : null;
+    if (family === "knife" && knifeMultiplier == null) {
+      errors.push(msg("fpp", "Knife Pleat must use 22 cm (2.2\u00D7) or 30 cm (3.0\u00D7). There is no default.", "\u5200\u578B\u8936\u53EA\u80FD\u9009 22 \u5398\u7C73\uFF082.2 \u500D\uFF09\u6216 30 \u5398\u7C73\uFF083.0 \u500D\uFF09\uFF0C\u6CA1\u6709\u9ED8\u8BA4\u3002", "fabricPerPleat"));
+    } else if (family !== "grommet" && family !== "knife" && !FOLDS.has(fabricPerPleat)) {
+      errors.push(msg("fpp", "Fabric per fold must be 22, 24 or 30 cm. Choose one. There is no default.", "\u8936\u7528\u6599\u5FC5\u987B\u9009\u62E9 22\u300124 \u6216 30 \u5398\u7C73\uFF0C\u6CA1\u6709\u9ED8\u8BA4\u3002", "fabricPerPleat"));
     }
     if (qtyValue == null || !Number.isFinite(qtyValue) || !Number.isInteger(qtyValue) || qtyValue < limits.quantity.min || qtyValue > limits.quantity.max) {
       errors.push(msg("qty", `Quantity must be a whole number from ${limits.quantity.min} to ${limits.quantity.max}.`, `\u6570\u91CF\u987B\u4E3A ${limits.quantity.min}\u2013${limits.quantity.max} \u7684\u6574\u6570\u3002`, "quantity"));
@@ -730,7 +830,9 @@ var LQ = (() => {
       return { folds: pleats, rings: null };
     }
     const ringCounts = [];
-    if (family === "ripple" && pitch && widthCm > 0) {
+    if (family === "knife" && widthCm > 0 && knifeMultiplier) {
+      counts = Array.from({ length: panelCount }, () => null);
+    } else if (family === "ripple" && pitch && widthCm > 0) {
       if (unequal) {
         const sides = panelWidths.map((panelCm) => calcGliders(panelCm, false, pitch));
         gliders = { n0: null, n1: null, total: sides[0].total + sides[1].total, half: null, perPanel: sides.map((side) => side.total) };
@@ -750,13 +852,14 @@ var LQ = (() => {
     } else {
       counts = Array.from({ length: panelCount }, () => 0);
     }
-    if (widthCm > 0 && counts.some((c) => c < 1)) {
+    if (family !== "knife" && widthCm > 0 && counts.some((c) => c < 1)) {
       errors.push(
         msg("narrow", "This window is too narrow for the chosen heading.", "\u7A97\u5BBD\u8FC7\u7A84\uFF0C\u65E0\u6CD5\u6309\u6240\u9009\u5E18\u5934\u5206\u8936\u3002", "width")
       );
     }
     const panels = counts.map((count, index) => {
-      const cutWidthCm2 = roundCm(count * fabricPerPleat + allowanceEach + returnExcess + overlapExcess);
+      const knifeShare = family === "knife" && knifeMultiplier ? roundCm(widthCm * knifeMultiplier / panelCount) : null;
+      const cutWidthCm2 = family === "knife" ? roundCm((knifeShare || 0) + allowanceEach + returnExcess + overlapExcess) : roundCm(count * fabricPerPleat + allowanceEach + returnExcess + overlapExcess);
       let drops = null;
       let cutDropCm = null;
       let usageCm2 = cutWidthCm2;
@@ -767,16 +870,16 @@ var LQ = (() => {
         usageCm2 = roundCm(drops * cutDropCm);
       }
       const glidersEach = family === "ripple" && gliders && gliders.perPanel ? gliders.perPanel[index] : null;
-      const runnersEach = family === "ripple" ? glidersEach : count;
+      const runnersEach = family === "ripple" ? glidersEach : (heading.extraPleat ? Math.max(count - 1, 0) : count);
       return {
         index: index + 1,
         side: sideFor(draw, index),
         widthCm: panelWidths[index] || 0,
         count,
-        hooks: family === "pinch" || family === "knife" ? count + 2 : null,
+        hooks: family === "pinch" ? count + 2 : null,
         rings: family === "grommet" ? ringCounts[index] || 0 : null,
         gliders: glidersEach,
-        runners: runnersEach,
+        runners: family === "knife" ? null : runnersEach,
         allowanceCm: allowanceEach,
         returnExcessCm: returnExcess,
         overlapExcessCm: overlapExcess,
@@ -786,8 +889,8 @@ var LQ = (() => {
         usageCm: usageCm2
       };
     });
-    const totalCount = panels.reduce((s, p) => s + p.count, 0);
-    const pureFabricCm = roundCm(totalCount * fabricPerPleat);
+    const totalCount = family === "knife" ? null : panels.reduce((s, p) => s + p.count, 0);
+    const pureFabricCm = family === "knife" && knifeMultiplier ? roundCm(widthCm * knifeMultiplier) : roundCm((totalCount || 0) * fabricPerPleat);
     const allowanceCm = roundCm(panels.reduce((s, p) => s + p.allowanceCm, 0));
     const excessCm = roundCm(panels.reduce((s, p) => s + p.returnExcessCm + p.overlapExcessCm, 0));
     const cutWidthCm = roundCm(panels.reduce((s, p) => s + p.cutWidthCm, 0));
@@ -795,12 +898,15 @@ var LQ = (() => {
     const usageMetersPerPiece = round3(usageCm / 100);
     const qty = Number.isInteger(qtyValue) && qtyValue > 0 ? qtyValue : 0;
     const usageMetersPriced = round3(usageMetersPerPiece * qty);
-    const fullness = widthCm > 0 ? pureFabricCm / widthCm : 0;
-    const fullnessDisplay = widthCm > 0 ? round1(pureFabricCm / widthCm) : 0;
+    const widthMetres = widthCm / 100;
+    const fullness = widthMetres > 0 ? usageMetersPerPiece / widthMetres : 0;
+    const fullnessDisplay = widthMetres > 0 ? round1(usageMetersPerPiece / widthMetres) : 0;
     const statedFullness = parseDecimal(input.orderedFullness);
     if (statedFullness != null && Number.isFinite(statedFullness) && Math.abs(fullnessDisplay - round1(statedFullness)) > 0.1 + 1e-9) {
-      warnings.push(msg("fullness-tol", `Fullness ${fullnessDisplay.toFixed(1)} differs from the stated ${round1(statedFullness).toFixed(1)} by more than 0.1.`, `\u4E30\u6EE1\u5EA6 ${fullnessDisplay.toFixed(1)} \u4E0E\u5BA2\u6237\u586B\u5199\u7684 ${round1(statedFullness).toFixed(1)} \u76F8\u5DEE\u8D85\u8FC7 0.1\u3002`, "orderedFullness"));
+      warnings.push(msg("fullness-tol", "stated fullness differs, please confirm (possible input error)", "\u5BA2\u6237\u586B\u5199\u7684\u4E30\u6EE1\u5EA6\u4E0E\u5B9E\u9645\u4E0D\u540C\uFF0C\u8BF7\u786E\u8BA4\uFF08\u53EF\u80FD\u662F\u586B\u5199\u6709\u8BEF\uFF09", "orderedFullness"));
     }
+    const hookHeight = parseHookHeight(input.hookHeight, input.hookHeightUnit);
+    const hookSpec = input.hookSpec == null ? "" : String(input.hookSpec);
     const calculatedRunners = panels.map((panel) => panel.runners);
     let suppliedRunners = null;
     if (Array.isArray(input.runnerCount)) suppliedRunners = input.runnerCount.map((value) => parseDecimal(value));
@@ -898,6 +1004,7 @@ var LQ = (() => {
       widthCm,
       fullnessDisplay,
       usageMetersPerPiece,
+      widthMetres: widthM,
       usageBasis: input.orientation === "fixed-width" ? "drop-length" : "cut-width",
       priceCnyPerM,
       cutFabricCnyPerM,
@@ -926,7 +1033,8 @@ var LQ = (() => {
       cutWidthCm,
       fullness,
       fullnessDisplay,
-      nominalFullness: nominalFullness(fabricPerPleat),
+      nominalFullness: family === "knife" ? knifeMultiplier : nominalFullness(fabricPerPleat),
+      knifeMultiplier: family === "knife" ? knifeMultiplier : null,
       actualSpacingCm,
       usageMetersPerPiece,
       usageMetersPriced,
@@ -941,8 +1049,11 @@ var LQ = (() => {
       runnerOverride,
       makingHooksPerPanel: panels.map((panel) => panel.hooks),
       orderedFullness: statedFullness != null && Number.isFinite(statedFullness) ? round1(statedFullness) : null,
+      hookHeightMm: hookHeight.mm,
+      hookHeightEntered: hookHeight.entered,
+      hookSpec,
       heading,
-      calcRule: heading.pending === "knife" ? "knife-same-count-as-double-pinch" : heading.rule === "ripple" ? "ripple-2to1" : heading.rule === "grommet" ? "grommet" : heading.extraPleat ? "pleat-plus-1" : heading.rule === "pleat" ? "pleat-shared" : null,
+      calcRule: family === "knife" ? "knife-multiplier" : heading.rule === "ripple" ? "ripple-2to1" : heading.rule === "grommet" ? "grommet" : heading.extraPleat ? "pleat-plus-1" : heading.rule === "pleat" ? "pleat-shared" : null,
       pricing: { widthM, trackM, curtainCny, trackCny, motorCny, tiebackCny, liningCny, lineCny, priceCnyPerM, cutFabricCnyPerM, priceQuoted },
       errors,
       warnings,
@@ -983,8 +1094,8 @@ var LQ = (() => {
       zh: `\u88C1\u5BBD = \u51C0\u6599 ${p.pureFabricCm} + \u635F\u8017 ${p.allowanceCm} + \u5305\u8FB9\u91CD\u53E0\u8D85\u51FA ${p.excessCm} = ${p.cutWidthCm} \u5398\u7C73`
     });
     lines.push({
-      en: `Fullness = pure \xF7 finished width = ${p.pureFabricCm} \xF7 ${p.widthCm} = ${p.fullnessDisplay}x (allowance excluded)`,
-      zh: `\u4E30\u6EE1\u5EA6 = \u51C0\u6599 \xF7 \u6210\u54C1\u5BBD = ${p.pureFabricCm} \xF7 ${p.widthCm} = ${p.fullnessDisplay} \u500D\uFF08\u4E0D\u542B\u635F\u8017\uFF09`
+      en: `Fullness (actual) = usage \xF7 finished width = ${p.usageMetersPerPiece} \xF7 ${p.widthMetres} = ${p.fullnessDisplay}`,
+      zh: `\u5B9E\u9645\u4E30\u6EE1\u5EA6 = \u7528\u6599 \xF7 \u6210\u54C1\u5BBD = ${p.usageMetersPerPiece} \xF7 ${p.widthMetres} = ${p.fullnessDisplay}`
     });
     if (p.usageBasis === "drop-length") {
       lines.push({

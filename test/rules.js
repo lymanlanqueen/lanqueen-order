@@ -71,7 +71,8 @@ const pinch = Object.assign({}, ripple, { headingFamily: "pinch", pinchStyle: "d
 const at10 = LQ.computeWindow(Object.assign({}, pinch, { hookSpacingCm: 10 }), face, rules, prices);
 const at12 = LQ.computeWindow(Object.assign({}, pinch, { hookSpacingCm: 12 }), face, rules, prices);
 check("hook spacing locked", at10.totalCount === at12.totalCount && at10.usageMetersPerPiece === at12.usageMetersPerPiece && at10.hookSpacingCm === 10);
-check("fullness one decimal", LQ.computeWindow(Object.assign({}, pinch, { draw: "double", width: 3 }), face, rules, prices).fullnessDisplay === 2.2);
+const fullnessRow = LQ.computeWindow(Object.assign({}, pinch, { draw: "double", width: 3 }), face, rules, prices);
+check("actual fullness is usage divided by finished width", fullnessRow.fullnessDisplay === Math.round((fullnessRow.usageMetersPerPiece / (fullnessRow.widthCm / 100)) * 10) / 10);
 const wide = LQ.computeWindow(Object.assign({}, pinch, { draw: "double", width: 3, height: 2.8, hem: "8+8" }), LQ.resolveFabric(endura, null), rules, prices);
 const block = wide.errors.find((error) => error.code === "fixed-height");
 check("width check blocks", !!block && !wide.warnings.some((warning) => warning.code === "fixed-height") && /fixed-width/.test(block.en) && /定宽/.test(block.zh));

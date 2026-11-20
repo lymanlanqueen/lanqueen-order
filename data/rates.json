@@ -1,25 +1,42 @@
 {
-  "source": "Bank of China",
-  "note": "Final amount converted at the Bank of China rate on the day of remittance / 最终金额按汇款当日中国银行牌价换算",
+  "source": "Bank of China 中行折算价",
+  "sourceUrl": "https://www.boc.cn/sourcedb/whpj/",
+  "rateBasis": "中行折算价 per 100 foreign currency, converted to CNY per 1 unit",
+  "publishedAt": "2026-11-20 15:05:54",
+  "note": "Reference only, final at BOC rate on remittance day / 仅供参考，最终按汇款当日中国银行牌价结算",
   "rates": [
     {
       "currency": "USD",
-      "rateCny": 6.766,
-      "rateDate": "2026-06-01",
-      "source": "Bank of China"
+      "rateCny": 6.7131,
+      "rateDate": "2026-11-20",
+      "publishedAt": "2026-11-20 15:05:54",
+      "basis": "中行折算价",
+      "per100": 671.31,
+      "placeholder": false,
+      "source": "Bank of China 中行折算价",
+      "sourceUrl": "https://www.boc.cn/sourcedb/whpj/"
     },
     {
       "currency": "AUD",
-      "rateCny": 4.8592,
-      "rateDate": "2026-06-01",
-      "source": "Bank of China"
+      "rateCny": 4.4518,
+      "rateDate": "2026-11-20",
+      "publishedAt": "2026-11-20 15:05:54",
+      "basis": "中行折算价",
+      "per100": 445.18,
+      "placeholder": false,
+      "source": "Bank of China 中行折算价",
+      "sourceUrl": "https://www.boc.cn/sourcedb/whpj/"
     },
     {
       "currency": "CAD",
-      "rateCny": 5,
-      "rateDate": null,
-      "placeholder": true,
-      "source": "待确认/估算 To be confirmed / estimate"
+      "rateCny": 4.6671,
+      "rateDate": "2026-11-20",
+      "publishedAt": "2026-11-20 15:05:54",
+      "basis": "中行折算价",
+      "per100": 466.71,
+      "placeholder": false,
+      "source": "Bank of China 中行折算价",
+      "sourceUrl": "https://www.boc.cn/sourcedb/whpj/"
     }
   ]
 }

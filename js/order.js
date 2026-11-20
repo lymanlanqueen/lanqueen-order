@@ -26,17 +26,18 @@
   let revealErrors = false;
 
   function blankCustomer() {
-    return { name: "", country: "", city: "", address: "", email: "", messenger: "", deliveryDate: "", currency: "USD", tradeTerm: "FOB", shippingMethod: "fedex", freightCny: "0", po: "", endClient: "", shipSeparate: false, shipAddress: "", shipCity: "", shipCountry: "", unbranded: false, sheetEnglishOnly: false, remarks: "" };
+    return { name: "", country: "", city: "", address: "", email: "", messenger: "", deliveryDate: "", currency: "USD", tradeTerm: "FOB", shippingMethod: "fedex", freightCny: "0", po: "", endClient: "", shipSeparate: false, shipAddress: "", shipCity: "", shipCountry: "", unbranded: false, sheetEnglishOnly: false, remarks: "", widthBasis: "", film: "" };
   }
   function blankWindow() {
     return {
       name: "", heading: "double_pinch", headingFamily: "pinch", pinchStyle: "double-pinch", rippleTape: "rivet",
       orientation: "fixed-height", lining: "none", topFinish: "none", width: "", height: "", unit: "m",
-      fabricPerPleat: 24, gliderPitch: 6, hookSpacingCm: 10, draw: "double", hem: "8+2",
+      fabricPerPleat: "", gliderPitch: 6, hookSpacingCm: 10, draw: "double", hem: "8+2",
       returnCm: "5", overlapCm: "5", tieback: "none", tiebackRemark: "", hardware: "customer",
       rodColor: "white", motorSide: "left", plugStandard: "AU", quantity: "1", fabricId: "", colorNumber: "", remarks: "", category: "blackout",
       widthBasis: "", leftWidth: "", rightWidth: "", location: "", colourName: "", supplier: "LAN QUEEN",
       fabricSource: "catalog", comModel: "", comWidthCm: "", runnerCount: "", leftRunnerCount: "", rightRunnerCount: "", orderedFullness: "",
+      hookHeight: "", hookHeightUnit: "mm", hookSpec: "", equalSplitConfirmed: false,
     };
   }
   function t(en, zh) { return lang === "zh" ? zh : en; }
@@ -57,16 +58,31 @@
   function rules() {
     return Object.assign({}, LQ.DEFAULT_RULES, { catalog: catalog });
   }
+  function basisOf(source) {
+    if (source.widthBasis === "finished" || source.widthBasis === "track") return source.widthBasis;
+    if (customer.widthBasis === "finished" || customer.widthBasis === "track") return customer.widthBasis;
+    return "";
+  }
+  function filmOf(source) {
+    if (LQ.normaliseHeading(source).rule === "grommet") return 30;
+    const raw = source.fabricPerPleat === "" || source.fabricPerPleat == null ? customer.film : source.fabricPerPleat;
+    if (raw === "" || raw == null) return NaN;
+    return Number(raw);
+  }
   function toInput(source) {
     const colorRaw = source.colorNumber;
     return {
-      name: source.name, heading: LQ.normaliseHeading(source).key, headingFamily: source.headingFamily, pinchStyle: source.pinchStyle, rippleTape: source.rippleTape,
+      name: source.location || source.name, heading: LQ.normaliseHeading(source).key, headingFamily: source.headingFamily, pinchStyle: source.pinchStyle, rippleTape: source.rippleTape,
       orientation: source.orientation, lining: source.lining, topFinish: source.topFinish,
       width: LQ.parseDecimal(source.width), height: LQ.parseDecimal(source.height), unit: source.unit,
-      fabricPerPleat: LQ.normaliseHeading(source).rule === "grommet" ? 30 : Number(source.fabricPerPleat),
+      fabricPerPleat: filmOf(source),
       gliderPitch: Number(source.gliderPitch), hookSpacingCm: LQ.DEFAULT_RULES.hookSpacingDefaultCm,
       draw: LQ.normaliseDraw(source.draw), hem: source.hem, returnCm: LQ.parseDecimal(source.returnCm), overlapCm: LQ.parseDecimal(source.overlapCm),
-      widthBasis: source.widthBasis === "finished" || source.widthBasis === "track" ? source.widthBasis : "",
+      widthBasis: basisOf(source),
+      equalSplitConfirmed: source.equalSplitConfirmed === true || source.equalSplitConfirmed === "true",
+      hookHeight: source.hookHeight || "",
+      hookHeightUnit: source.hookHeightUnit || "mm",
+      hookSpec: source.hookSpec || "",
       leftWidth: LQ.parseDecimal(source.leftWidth), rightWidth: LQ.parseDecimal(source.rightWidth),
       location: source.location || "", colourName: source.colourName || "", supplier: source.supplier || "",
       fabricSource: source.fabricSource === "com" ? "com" : "catalog",
@@ -206,15 +222,15 @@
       field("WhatsApp / WeChat", "WhatsApp / 微信", "<input data-c='messenger' value='" + esc(customer.messenger) + "'>") +
       field("Customer PO / Job No.", "客户单号", "<input data-c='po' value='" + esc(customer.po) + "'>") +
       field("End client (optional)", "终端客户（选填）", "<input data-c='endClient' value='" + esc(customer.endClient) + "'>") +
-      field("Freight CNY", "运费（人民币）", "<input data-c='freightCny' inputmode='decimal' value='" + esc(customer.freightCny) + "'>") + "</div>" +
-      "<p class='note'>" + esc(LQ.FREIGHT_NOTE) + "</p>" +
+      "</div>" +
+      "<p class='note'><b>" + esc(LQ.FREIGHT_NOTE) + "</b></p>" +
       "<p><label><input type='checkbox' data-c='shipSeparate'" + (customer.shipSeparate ? " checked" : "") + "> Separate ship-to / drop-ship address / 另填收货地址</label></p>" +
       (customer.shipSeparate ? field("Ship-to address", "收货地址", "<textarea data-c='shipAddress'>" + esc(customer.shipAddress) + "</textarea>") + "<div class='grid2'>" + field("Ship-to city", "收货城市", "<input data-c='shipCity' value='" + esc(customer.shipCity) + "'>") + field("Ship-to country", "收货国家", "<input data-c='shipCountry' value='" + esc(customer.shipCountry) + "'>") + "</div>" : "") +
       "<p><label><input type='checkbox' data-c='sheetEnglishOnly'" + (customer.sheetEnglishOnly ? " checked" : "") + "> English-only customer sheet / 客户单仅英文</label></p>" +
       "<p><label><input type='checkbox' data-c='unbranded'" + (customer.unbranded ? " checked" : "") + "> Unbranded packaging & documents / 无牌包装和单据</label></p>" +
       "<p class='field'>" + bi("Currency", "结算币种") + "</p><div class='choices'>" + currencies.map((code) => {
         const rate = rateFor(code);
-        return choice(customer.currency === code, "data-cset='currency' data-value='" + code + "'", code + (rate ? "<small>1 = " + rate.rateCny + " CNY · " + esc(LQ.ESTIMATE_MARK) + "</small>" : "<small>人民币</small>"));
+        return choice(customer.currency === code, "data-cset='currency' data-value='" + code + "'", code + (rate ? "<small>1 = " + rate.rateCny + " CNY · " + esc(LQ.REFERENCE_MARK) + "</small>" : "<small>人民币</small>"));
       }).join("") + "</div><p class='note'>" + esc(LQ.NOT_A_QUOTE.en) + " / " + esc(LQ.NOT_A_QUOTE.zh) + "</p><div class='grid2' style='margin-top:12px'><div><p class='field'>" + bi("Trade term", "贸易术语") + "</p><div class='choices'>" +
       LQ.DEFAULT_RULES.tradeTerms.map((term) => choice(customer.tradeTerm === term, "data-cset='tradeTerm' data-value='" + term + "'", term)).join("") +
       "</div></div><div><p class='field'>" + bi("Shipping method", "运输方式") + "</p><div class='choices one'>" +
@@ -237,11 +253,13 @@
     const rules = LQ.DEFAULT_RULES;
     let body = "<p class='note'>WINDOW · " + (step + 1) + "/" + STEPS.length + "</p><h1>" + t(STEPS[step][0], STEPS[step][1]) + "</h1><div class='steps'>" + STEPS.map((_, index) => "<i class='" + (index === step ? "on" : index < step ? "done" : "") + "'></i>").join("") + "</div>";
     if (step === 2) {
-      body += field("Window name", "窗位名称", "<input data-w='name' placeholder='" + t("Living room", "客厅") + "' value='" + esc(draft.name) + "'>");
       const headingNow = draft.heading || LQ.normaliseHeading(draft).key || "";
       body += "<div class='choices'>" + LQ.HEADING_ORDER.map((key) => choice(headingNow === key, "data-wset='heading' data-value='" + key + "'", bi(LQ.HEADING_LABEL[key].en, LQ.HEADING_LABEL[key].zh))).join("") + "</div>";
       if (headingNow === "ripple_fold") {
         body += "<div class='choices'>" + rules.enabledRippleTapes.map((tape) => choice(draft.rippleTape === tape, "data-wset='rippleTape' data-value='" + tape + "'", bi(LQ.TAPE_LABEL[tape].en, LQ.TAPE_LABEL[tape].zh))).join("") + "</div>";
+      }
+      if (headingNow === "knife") {
+        body += "<figure class='knife-help'><img src='assets/knife-pleat.jpg' alt='Knife Pleat'><figcaption>Knife Pleat / 刀型褶. Usage and runner rule pending confirmation. / 用料和滑车规则待确认。</figcaption></figure>";
       }
       body += "<div class='choices'>" + Object.keys(LQ.ORIENTATION_LABEL).map((key) => choice(draft.orientation === key, "data-wset='orientation' data-value='" + key + "'", bi(LQ.ORIENTATION_LABEL[key].en, LQ.ORIENTATION_LABEL[key].zh))).join("") + "</div>";
       body += "<div class='choices'>" + Object.keys(LQ.LINING_LABEL).map((key) => choice(draft.lining === key, "data-wset='lining' data-value='" + key + "'", bi(LQ.LINING_LABEL[key].en, LQ.LINING_LABEL[key].zh))).join("") + "</div>";
@@ -259,7 +277,7 @@
       body += "<p class='note'>" + (draft.widthBasis === "finished" ? "Returns and overlap are already included in a finished width, so they are not added again. / 成品宽已含回边和搭接，不再另加。" : draft.widthBasis === "track" ? "Extra return or overlap over 5 cm is added to the cut, per panel. / 回边或搭接超出 5 厘米的部分，每片加进裁宽。" : "Choose Track width or Finished width before the cloth is calculated. / 先选择轨道宽或成品宽，再计算用料。") + "</p>";
       body += "<p class='note'>Finished height is the drop as ordered. Clearance and puddle are already included. Nothing is deducted. / 高度就是下单成品高，已含离地或堆地，系统不扣减。</p>";
       body += "<div class='grid2'>" + field(draft.widthBasis === "finished" ? "Finished width" : "Track width", draft.widthBasis === "finished" ? "成品宽" : "轨道宽", "<input data-w='width' inputmode='decimal' value='" + esc(draft.width) + "'>") + field("Finished height", "成品高", "<input data-w='height' inputmode='decimal' value='" + esc(draft.height) + "'>") + "</div>";
-      if (draft.draw === "double") body += "<div class='grid2'>" + field("Left width", "左片宽", "<input data-w='leftWidth' inputmode='decimal' value='" + esc(draft.leftWidth) + "'>") + field("Right width", "右片宽", "<input data-w='rightWidth' inputmode='decimal' value='" + esc(draft.rightWidth) + "'>") + "</div><p class='note'>Leave both blank to split the width equally. Fill both for an unequal pair. / 两格都空则对半。都填则按不等分双开。</p>";
+      if (draft.draw === "double") body += "<div class='grid2'>" + field("Left width", "左片宽", "<input data-w='leftWidth' inputmode='decimal' value='" + esc(draft.leftWidth) + "'>") + field("Right width", "右片宽", "<input data-w='rightWidth' inputmode='decimal' value='" + esc(draft.rightWidth) + "'>") + "</div><p class='note'>Equal split? Enter L/R widths if unequal. / 对半开？不等分请填写左右宽。</p><p><label><input type='checkbox' data-w='equalSplitConfirmed'" + (draft.equalSplitConfirmed ? " checked" : "") + "> Confirm equal split / 确认对半</label></p>";
       body += inline("width") + inline("height");
     }
     if (step === 4) {
@@ -268,24 +286,34 @@
       } else {
         body += "<p class='note'>Hook spacing is fixed at 10 cm. / 挂钩间距固定为 10 厘米。</p>";
       }
-      if (LQ.normaliseHeading(draft).rule === "grommet") {
+      if (LQ.normaliseHeading(draft).rule === "knife") {
+        body += "<p class='field'>" + bi("Knife multiplier (required)", "刀型褶倍数（必选）") + "</p><p class='note'>22 cm = reference 2.2×. 30 cm = reference 3.0×. No default. Usage = finished width × multiplier + 15 cm side hem per panel. No runners or hooks. / 没有默认。用料 = 成品宽 × 倍数 + 每片 15 厘米边缝。不计滑车和钩。</p><div class='choices'>" +
+          [[22, "2.2×"], [30, "3.0×"]].map((item) => choice(Number(draft.fabricPerPleat) === item[0], "data-wset='fabricPerPleat' data-value='" + item[0] + "'", item[0] + " cm " + item[1])).join("") +
+          "</div>" + inline("fabricPerPleat");
+      } else if (LQ.normaliseHeading(draft).rule === "grommet") {
         body += "<p class='note'>Grommet film is fixed at 30 cm. Folds = ring count ÷ 2. / 打孔纸膜固定 30 厘米。褶位数 = 环数 ÷ 2。</p>";
       } else {
-        body += "<p class='note'>" + t("Fabric per pleat. 24 cm is about 2.2× and is the default.", "褶用料。24 厘米约 2.2 倍，为默认。") + "</p><div class='choices'>";
-        [[22, "≈1.9×"], [24, "≈2.2×"], [30, "≈2.8×"]].forEach((item) => {
-          body += choice(Number(draft.fabricPerPleat) === item[0], "data-wset='fabricPerPleat' data-value='" + item[0] + "'", item[0] + " cm " + item[1] + (item[0] === 24 ? " ★" : ""));
+        body += "<p class='field'>" + bi("Fabric per fold (required)", "褶用料（必选）") + "</p><p class='note'>" + t("Choose 22, 24 or 30 cm. Nothing is preselected. The × figure is a reference, not the actual fullness.", "请选 22、24 或 30 厘米。没有预选。倍数只是参考，不是实际丰满度。") + "</p><div class='choices'>";
+        [[22, "reference 1.9×"], [24, "reference 2.2×"], [30, "reference 2.8×"]].forEach((item) => {
+          body += choice(Number(draft.fabricPerPleat) === item[0], "data-wset='fabricPerPleat' data-value='" + item[0] + "'", item[0] + " cm " + item[1]);
         });
-        body += "</div>";
+        body += "</div>" + inline("fabricPerPleat");
       }
     }
     if (step === 3) {
       body += "<div class='choices one'>" + Object.keys(LQ.DRAW_LABEL).map((key) => choice(draft.draw === key, "data-wset='draw' data-value='" + key + "'", bi(LQ.DRAW_LABEL[key].en, LQ.DRAW_LABEL[key].zh))).join("") + "</div>";
-      body += field("Runner count per panel", "每片滑车数", "<input data-w='runnerCount' inputmode='numeric' value='" + esc(draft.runnerCount) + "'>");
+      if (LQ.normaliseHeading(draft).rule !== "knife") body += field("Runner count per panel", "每片滑车数", "<input data-w='runnerCount' inputmode='numeric' value='" + esc(draft.runnerCount) + "'>");
       body += "<p class='note'>Leave blank to use the calculated count. A different number is kept and flagged; it does not change the fabric price. / 留空则用计算值。填了不同的数会保留并标出，不改面料价。</p>";
-      body += "<p class='note'><b>" + esc(LQ.DEFAULTS_NOTE) + "</b><br>Hem 8+2 · return 5 cm · overlap 5 cm · hook spacing 10 cm · runner count from the heading rule, until you change them. / 下摆 8+2、包边 5 厘米、搭接 5 厘米、钩距 10 厘米、滑车数按帘头规则，除非你改掉。</p>";
-      body += field("Stated fullness", "客户丰满度", "<input data-w='orderedFullness' inputmode='decimal' value='" + esc(draft.orderedFullness) + "'>");
+      body += "<p class='note'><b>" + esc(LQ.DEFAULTS_NOTE) + "</b><br>Hem 8+2 · return 5 cm · overlap 5 cm · hook spacing 10 cm · film is not filled in until you choose 22, 24 or 30 cm. / 下摆 8+2、包边 5 厘米、搭接 5 厘米、钩距 10 厘米。纸膜没有预选，须另选 22、24 或 30 厘米。</p>";
+      body += field("Stated fullness (reference only)", "客户丰满度（仅供参考）", "<input data-w='orderedFullness' inputmode='decimal' value='" + esc(draft.orderedFullness) + "'>");
+      body += "<p class='note'>A stated fullness does not change the cloth or the price. / 填写的丰满度不改用料，也不改价格。</p>";
     }
-    if (step === 5) body += "<div class='choices one'>" + Object.keys(LQ.HEM_LABEL).map((key) => choice(draft.hem === key, "data-wset='hem' data-value='" + key + "'", bi(LQ.HEM_LABEL[key].en, LQ.HEM_LABEL[key].zh))).join("") + "</div>";
+    if (step === 5) {
+      body += "<div class='choices one'>" + Object.keys(LQ.HEM_LABEL).map((key) => choice(draft.hem === key, "data-wset='hem' data-value='" + key + "'", bi(LQ.HEM_LABEL[key].en, LQ.HEM_LABEL[key].zh))).join("") + "</div>";
+      body += "<div class='grid2'>" + field("Hook Height / 上冒", "钩到顶", "<input data-w='hookHeight' value='" + esc(draft.hookHeight) + "' placeholder='35mm or 3.5cm'>") + field("Unit", "单位", "<select data-w='hookHeightUnit'><option value='mm'" + (draft.hookHeightUnit !== "cm" ? " selected" : "") + ">mm</option><option value='cm'" + (draft.hookHeightUnit === "cm" ? " selected" : "") + ">cm</option></select>") + "</div>";
+      body += field("Hook spec / 钩子规格", "钩子规格", "<input data-w='hookSpec' value='" + esc(draft.hookSpec) + "' placeholder='89钩'>");
+      body += "<p class='note'>Optional. Neither field changes the cloth or the price. 80钩 / 89钩 here is the hook type, not a count. / 选填。这两项不改用料和价格。80钩、89钩是钩型，不是钩数。</p>";
+    }
     if (step === 6) {
       body += "<p class='note'>Each panel adds 15 cm allowance. A double draw is two panels, 30 cm in total. Only return or overlap above 5 cm is added, on every panel. / 每片加 15 厘米损耗。双开两片，合计 30 厘米。包边或重叠超出 5 厘米的部分，每片再加。</p>";
       body += field("Return (cm)", "包边（厘米）", "<input data-w='returnCm' inputmode='decimal' value='" + esc(draft.returnCm) + "'>") + inline("return");
@@ -297,7 +325,7 @@
       body += "<div class='choices'>" + Object.keys(LQ.TIEBACK_LABEL).map((key) => choice(draft.tieback === key, "data-wset='tieback' data-value='" + key + "'", bi(LQ.TIEBACK_LABEL[key].en, LQ.TIEBACK_LABEL[key].zh))).join("") + "</div>";
       if (draft.tieback === "custom") body += field("Describe the tieback", "绑带说明", "<textarea data-w='tiebackRemark'>" + esc(draft.tiebackRemark) + "</textarea>");
       body += "<p class='estimate'>" + esc(LQ.ESTIMATE_MARK) + "</p><p class='note'>" + esc(LQ.NOT_A_QUOTE.en) + " / " + esc(LQ.NOT_A_QUOTE.zh) + "</p>";
-      body += "<div class='choices one'>" + Object.keys(LQ.HARDWARE_LABEL).map((key) => choice(draft.hardware === key, "data-wset='hardware' data-value='" + key + "'", bi(LQ.HARDWARE_LABEL[key].en, LQ.HARDWARE_LABEL[key].zh) + (hardwareHint[key] ? "<small>" + hardwareHint[key] + " · " + esc(LQ.ESTIMATE_MARK) + "</small>" : ""))).join("") + "</div>";
+      body += "<div class='choices one'>" + Object.keys(LQ.HARDWARE_LABEL).map((key) => choice(draft.hardware === key, "data-wset='hardware' data-value='" + key + "'", bi(LQ.HARDWARE_LABEL[key].en, LQ.HARDWARE_LABEL[key].zh) + (hardwareHint[key] ? "<small>" + hardwareHint[key] + " · " + esc(LQ.REFERENCE_MARK) + "</small>" : ""))).join("") + "</div>";
       if (draft.hardware === "roman-rod") body += "<div class='choices'>" + Object.keys(LQ.ROD_LABEL).map((key) => choice(draft.rodColor === key, "data-wset='rodColor' data-value='" + key + "'", bi(LQ.ROD_LABEL[key].en, LQ.ROD_LABEL[key].zh))).join("") + "</div>";
       if (draft.hardware === "electric-track") {
         body += "<p class='note'>" + t("Motorized orders use the white electric track and a remote only.", "电动只配白色专用轨道，控制方式只有遥控。") + "</p><div class='choices'>" +
@@ -331,7 +359,7 @@
         body += field("COM fabric name", "客供面料名", "<input data-w='comModel' value='" + esc(draft.comModel) + "'>");
         body += field("COM width (cm)", "客供门幅（厘米）", "<input data-w='comWidthCm' inputmode='decimal' value='" + esc(draft.comWidthCm) + "'>");
       }
-      body += field("Location / window no.", "位置 / 窗号", "<input data-w='location' value='" + esc(draft.location) + "'>");
+      body += field("Location / Window No.", "位置 / 窗号", "<input data-w='location' value='" + esc(draft.location || draft.name) + "'>") + inline("name");
       body += field("Colour name", "颜色名", "<input data-w='colourName' value='" + esc(draft.colourName) + "'>");
       body += field("Supplier", "供应商", "<input data-w='supplier' value='" + esc(draft.supplier) + "'>");
       body += field("Quantity", "数量", "<input data-w='quantity' inputmode='numeric' value='" + esc(draft.quantity) + "'>") + inline("quantity");
@@ -340,33 +368,47 @@
     return body + errorList();
   }
 
+  function cell(index, label, inner) {
+    return "<label title='" + esc(label) + "'><span>" + esc(label) + "</span>" + inner + "</label>";
+  }
   function tableView() {
-    const head = "<tr><th>Model</th><th>Width</th><th>Height</th><th>Unit</th><th>Heading</th><th>L</th><th>R</th><th>Open</th><th>Basis</th><th>Location</th><th>Qty</th><th></th></tr>";
+    const header = LQ.PASTE_COLUMNS.map((column) => column.header).join("\t");
+    const example = "Living room\t2.4\t2.6\tm\tdouble\tMasal\t\ttrack\t1\t35mm\t89钩";
     const body = windows.map((item, index) => {
       const result = computeDraft(item);
       const warn = result ? result.warnings.map((warning) => warning.en).join("; ") : "";
       const err = result ? result.errors.map((error) => error.en).join("; ") : "";
-      return "<tr><td><input data-row='" + index + "' data-field='fabricId' value='" + esc(item.fabricId) + "' placeholder='model'></td>" +
-        "<td><input data-row='" + index + "' data-field='width' value='" + esc(item.width) + "'></td>" +
-        "<td><input data-row='" + index + "' data-field='height' value='" + esc(item.height) + "'></td>" +
-        "<td><select data-row='" + index + "' data-field='unit'>" + Object.keys(LQ.UNIT_LABEL).map((unit) => "<option value='" + unit + "'" + (item.unit === unit ? " selected" : "") + ">" + unit + "</option>").join("") + "</select></td>" +
-        "<td><select data-row='" + index + "' data-field='heading'>" + LQ.HEADING_ORDER.map((key) => "<option value='" + key + "'" + ((item.heading || LQ.normaliseHeading(item).key) === key ? " selected" : "") + ">" + esc(LQ.HEADING_LABEL[key].en) + " " + esc(LQ.HEADING_LABEL[key].zh) + "</option>").join("") + "</select></td>" +
-        "<td><input data-row='" + index + "' data-field='leftWidth' value='" + esc(item.leftWidth) + "'></td>" +
-        "<td><input data-row='" + index + "' data-field='rightWidth' value='" + esc(item.rightWidth) + "'></td>" +
-        "<td><select data-row='" + index + "' data-field='draw'>" + Object.keys(LQ.DRAW_LABEL).map((key) => "<option value='" + key + "'" + (item.draw === key ? " selected" : "") + ">" + LQ.DRAW_LABEL[key].en + "</option>").join("") + "</select></td>" +
-        "<td><select data-row='" + index + "' data-field='widthBasis'><option value=''" + (!item.widthBasis ? " selected" : "") + ">Choose</option><option value='track'" + (item.widthBasis === "track" ? " selected" : "") + ">Track</option><option value='finished'" + (item.widthBasis === "finished" ? " selected" : "") + ">Finished</option></select></td>" +
-        "<td><input data-row='" + index + "' data-field='location' value='" + esc(item.location || item.name) + "'></td>" +
-        "<td><input data-row='" + index + "' data-field='quantity' value='" + esc(item.quantity) + "'></td>" +
-        "<td><button type='button' class='btn alt' data-act='dup' data-index='" + index + "'>Clone</button> <button type='button' class='btn alt' data-act='expand' data-index='" + index + "'>Expand</button> <button type='button' class='btn alt' data-act='remove' data-index='" + index + "'>Del</button></td></tr>" +
-        "<tr><td colspan='12' class='note'>" + esc(result ? result.usageMetersPerPiece + " m · ¥" + result.pricing.lineCny.toFixed(2) : "") + (warn ? " · " + esc(warn) : "") + (err ? " · " + esc(err) : "") + "</td></tr>";
+      const filmValue = item.fabricPerPleat === "" || item.fabricPerPleat == null ? customer.film : item.fabricPerPleat;
+      return "<article class='batch-row'>" +
+        cell(index, "Model", "<input data-row='" + index + "' data-field='fabricId' value='" + esc(item.fabricId) + "' placeholder='Masal'>") +
+        cell(index, "Colour No.", "<input data-row='" + index + "' data-field='colorNumber' value='" + esc(item.colorNumber) + "'>") +
+        cell(index, "Width", "<input data-row='" + index + "' data-field='width' value='" + esc(item.width) + "'>") +
+        cell(index, "Height", "<input data-row='" + index + "' data-field='height' value='" + esc(item.height) + "'>") +
+        cell(index, "Unit", "<select data-row='" + index + "' data-field='unit'>" + Object.keys(LQ.UNIT_LABEL).map((unit) => "<option value='" + unit + "'" + (item.unit === unit ? " selected" : "") + ">" + unit + "</option>").join("") + "</select>") +
+        cell(index, "Qty", "<input data-row='" + index + "' data-field='quantity' value='" + esc(item.quantity) + "'>") +
+        "<label class='wide' title='" + esc(LQ.HEADING_LABEL[(item.heading || LQ.normaliseHeading(item).key) || "double_pinch"].en) + "'><span>Heading</span><select data-row='" + index + "' data-field='heading'>" + LQ.HEADING_ORDER.map((key) => "<option value='" + key + "'" + ((item.heading || LQ.normaliseHeading(item).key) === key ? " selected" : "") + " title='" + esc(LQ.HEADING_LABEL[key].en + " " + LQ.HEADING_LABEL[key].zh) + "'>" + esc(LQ.HEADING_LABEL[key].en) + "</option>").join("") + "</select></label>" +
+        cell(index, "Film", "<select data-row='" + index + "' data-field='fabricPerPleat'><option value=''" + (filmValue === "" || filmValue == null ? " selected" : "") + ">Choose</option>" + ((item.heading === "knife") ? [22, 30] : [22, 24, 30]).map((film) => "<option value='" + film + "'" + (Number(filmValue) === film ? " selected" : "") + ">" + film + " cm</option>").join("") + "</select>") +
+        cell(index, "Basis", "<select data-row='" + index + "' data-field='widthBasis'><option value=''" + (!item.widthBasis ? " selected" : "") + ">Order</option><option value='track'" + (item.widthBasis === "track" ? " selected" : "") + ">Track</option><option value='finished'" + (item.widthBasis === "finished" ? " selected" : "") + ">Finished</option></select>") +
+        cell(index, "Open", "<select data-row='" + index + "' data-field='draw'>" + Object.keys(LQ.DRAW_LABEL).map((key) => "<option value='" + key + "'" + (item.draw === key ? " selected" : "") + ">" + LQ.DRAW_LABEL[key].en + "</option>").join("") + "</select>") +
+        cell(index, "L", "<input data-row='" + index + "' data-field='leftWidth' value='" + esc(item.leftWidth) + "'>") +
+        cell(index, "R", "<input data-row='" + index + "' data-field='rightWidth' value='" + esc(item.rightWidth) + "'>") +
+        cell(index, "Location", "<input data-row='" + index + "' data-field='location' value='" + esc(item.location || item.name) + "'>") +
+        "<p class='batch-actions'><button type='button' class='btn alt' data-act='dup' data-index='" + index + "'>Clone</button> <button type='button' class='btn alt' data-act='expand' data-index='" + index + "'>Expand</button> <button type='button' class='btn alt' data-act='remove' data-index='" + index + "'>Del</button></p>" +
+        "<p class='note batch-note'>" + esc(result ? result.usageMetersPerPiece + " m · ¥" + result.pricing.lineCny.toFixed(2) : "") + (warn ? " · " + esc(warn) : "") + (err ? " · " + esc(err) : "") + (item.modelError ? " · " + esc(item.modelError) : "") + "</p></article>";
     }).join("");
     const total = windows.reduce((sum, item) => { const result = computeDraft(item); return sum + (result ? result.pricing.lineCny : 0); }, 0);
-    return "<h1>" + t("Table", "表格") + "</h1><p class='lede'>" + t("One row per window. Paste tab-separated rows below: location, width, height, unit, draw, model id, quantity.", "一行一窗。可粘贴制表符分隔：位置、宽、高、单位、开合、型号、数量。") + "</p>" +
-      "<div style='overflow:auto'><table class='grid'>" + head + body + "</table></div>" +
+    return "<h1>" + t("Table", "表格") + "</h1>" +
+      "<div class='grid2'>" +
+      "<label class='field'>" + bi("Order width basis (required)", "整单宽度基准（必选）") + "<select data-c='widthBasis'><option value=''" + (!customer.widthBasis ? " selected" : "") + ">Choose</option><option value='track'" + (customer.widthBasis === "track" ? " selected" : "") + ">Track</option><option value='finished'" + (customer.widthBasis === "finished" ? " selected" : "") + ">Finished</option></select></label>" +
+      "<label class='field'>" + bi("Order film for empty rows", "空行使用的纸膜") + "<select data-c='film'><option value=''" + (!customer.film ? " selected" : "") + ">Choose per row</option>" + [22, 24, 30].map((film) => "<option value='" + film + "'" + (String(customer.film) === String(film) ? " selected" : "") + ">" + film + " cm</option>").join("") + "</select></label></div>" +
+      "<p class='lede'>Paste columns, in this order: " + esc(header) + "</p>" +
+      "<p class='note'>Example: " + esc(example) + "</p>" +
+      "<label class='field'>" + bi("Header line", "表头") + "<input id='paste-header' readonly value='" + esc(header) + "'></label>" +
+      body +
       "<p><button class='btn brass' type='button' data-act='add-row'>" + t("Add row", "加一行") + "</button></p>" +
       "<label class='field'>" + bi("Paste from Excel", "从 Excel 粘贴") + "<textarea id='paste'></textarea></label>" +
       "<p><button class='btn alt' type='button' data-act='paste'>" + t("Import rows", "导入") + "</button></p>" +
-      "<p><b>CNY ¥" + total.toFixed(2) + "</b> · " + esc(LQ.FREIGHT_NOTE) + " · " + esc(LQ.ESTIMATE_MARK) + "</p>";
+      "<p><b>CNY ¥" + total.toFixed(2) + "</b> · " + esc(LQ.FREIGHT_NOTE) + " · " + esc(LQ.REFERENCE_MARK) + "</p>";
   }
 
   function reviewView() {
@@ -408,12 +450,14 @@
       const blocked = result.errors.find((error) => error.code === "fixed-height");
       if (blocked) html += "<div class='errors' data-block='fixed-height'><b>" + esc(blocked.en) + "</b><br>" + esc(blocked.zh) + "<br>This window cannot be submitted. / 此窗无法提交。</div>";
       html += "<p class='big'>" + result.usageMetersPerPiece.toFixed(3) + " m</p><p class='note'>" + t("Face fabric used for the curtain price, per piece", "窗帘成品价按此用料") + "</p>";
-      html += "<p>" + t("Cut width", "裁宽") + " " + result.cutWidthCm + " cm · " + t("Fullness", "丰满度") + " " + Number(result.fullnessDisplay).toFixed(1) + "x</p>";
+      html += "<p>" + t("Cut width", "裁宽") + " " + result.cutWidthCm + " cm</p>";
+      html += "<p>Fullness (actual) = usage ÷ finished width " + Number(result.fullnessDisplay).toFixed(1) + "</p>";
+      if (result.nominalFullness) html += "<p class='note'>Reference " + result.nominalFullness + "×</p>";
       html += "<p>" + (result.totalGliders ? t("Gliders", "滑轮") + " " + result.totalGliders + " · " + t("Folds", "褶") + " " + result.totalCount : result.totalRings ? t("Rings", "环") + " " + result.totalRings + " · " + t("Folds", "褶") + " " + result.totalCount : t("Pleats", "褶") + " " + result.totalCount + " · " + t("Hooks", "钩") + " " + result.totalHooks) + "</p>";
       if (active.fabricId && result.pricing.priceCnyPerM) html += "<p>" + t("Curtain", "窗帘") + " ¥" + result.pricing.curtainCny.toFixed(2) + "</p>";
       if (result.pricing.cutFabricCnyPerM != null) html += "<p class='note'>" + esc(LQ.CUT_FABRIC_LABEL) + " ¥" + result.pricing.cutFabricCnyPerM + "/m · not included in the curtain total / 不计入窗帘合计</p>";
       if (result.lining && result.lining.id !== "none") html += "<p>" + t("Lining", "里布") + " " + result.lining.usageMeters + " m × ¥" + result.lining.rate + " = ¥" + result.pricing.liningCny.toFixed(2) + "</p>";
-      if (result.pricing.trackCny || result.pricing.motorCny) html += "<p class='estimate'>" + esc(LQ.ESTIMATE_MARK) + " · " + t("Hardware", "五金") + " ¥" + (result.pricing.trackCny + result.pricing.motorCny).toFixed(2) + "</p>";
+      if (result.pricing.trackCny || result.pricing.motorCny) html += "<p class='estimate'>" + esc(LQ.REFERENCE_MARK) + " · " + t("Hardware", "五金") + " ¥" + (result.pricing.trackCny + result.pricing.motorCny).toFixed(2) + "</p>";
       if (active.fabricId) html += "<p>" + t("This window", "本窗") + " ¥" + result.pricing.lineCny.toFixed(2) + "</p>";
       shownErrors(result).filter((error) => error.code !== "fixed-height").forEach((error) => { html += "<p class='warn'>" + esc(error.en) + " / " + esc(error.zh) + "</p>"; });
       result.warnings.forEach((warning) => { html += "<p class='warn'>" + esc(warning.en) + " / " + esc(warning.zh) + "</p>"; });
@@ -422,7 +466,7 @@
     if (!windows.length) html += "<p class='note'>" + t("The CNY total appears after a window is saved.", "保存窗位后这里显示人民币合计。") + "</p>";
     else {
       html += "<p><b>CNY ¥" + saved.toFixed(2) + "</b></p>";
-      if (settlement.foreign != null) html += "<p class='estimate'>" + esc(LQ.ESTIMATE_MARK) + "</p><p>" + customer.currency + " " + settlement.foreign.toFixed(2) + "</p>";
+      if (settlement.foreign != null) html += "<p class='estimate'>" + esc(LQ.REFERENCE_MARK) + "</p><p>" + customer.currency + " " + settlement.foreign.toFixed(2) + "</p><p class='note'>Reference only, final at BOC rate on remittance day</p>";
     }
     html += "<p class='note'>" + esc(LQ.NOT_A_QUOTE.en) + " / " + esc(LQ.NOT_A_QUOTE.zh) + "</p>";
     if (customer.currency !== "CNY") html += "<p class='note'>" + esc(LQ.FX_NOTE) + "</p>";
@@ -431,7 +475,7 @@
 
   function readInputs() {
     document.querySelectorAll("[data-c]").forEach((el) => { customer[el.dataset.c] = el.type === "checkbox" ? el.checked : el.value; });
-    if (draft) document.querySelectorAll("[data-w]").forEach((el) => { draft[el.dataset.w] = el.value; });
+    if (draft) document.querySelectorAll("[data-w]").forEach((el) => { draft[el.dataset.w] = el.type === "checkbox" ? el.checked : el.value; });
     document.querySelectorAll("[data-row]").forEach((el) => {
       const row = windows[Number(el.dataset.row)];
       if (row) row[el.dataset.field] = el.value;
@@ -570,31 +614,25 @@
     }
     if (action === "paste") {
       const raw = (document.querySelector("#paste") || {}).value || "";
-      raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((line) => {
-        const cells = line.split("\t");
-        if (/location/i.test(cells[0])) return;
-        const row = blankWindow();
-        row.location = cells[0] || "";
-        row.name = row.location || "Window";
-        row.width = cells[1] || "";
-        row.height = cells[2] || "";
-        row.unit = cells[3] || "mm";
-        row.draw = LQ.normaliseDraw(cells[4] || "double");
-        const model = LQ.findFabric(catalog, cells[5] || "", cells[6] || null);
-        row.fabricId = model ? model.id : (cells[5] || "");
-        row.colorNumber = cells[6] || "";
-        row.quantity = cells[7] || "1";
-        windows.push(row);
-      });
+      const parsed = LQ.parsePaste(raw, { catalog, orderWidthBasis: customer.widthBasis, orderFilm: customer.film });
+      if (parsed.errors.length) problems = parsed.errors.map((error) => error.en + " / " + error.zh);
+      else {
+        parsed.rows.forEach((row) => {
+          const item = blankWindow();
+          Object.assign(item, row);
+          item.name = item.location || item.name;
+          windows.push(item);
+        });
+        problems = [];
+      }
     }
     if (action === "edit") { editIndex = Number(act.dataset.index); draft = { ...windows[editIndex] }; step = 0; phase = "edit"; problems = []; }
     if (action === "remove") windows.splice(Number(act.dataset.index), 1);
     if (action === "review") phase = "review";
     if (action === "next") {
-      const stepFields = { 0: ["fabricId", "colorNumber"], 1: ["width", "height", "unit"], 6: ["return", "overlap"] };
       if (step < STEPS.length - 1) {
         const result = draftResultSafe();
-        const fields = stepFields[step] || [];
+        const fields = LQ.WIZARD_STEP_FIELDS[step] || [];
         const bad = result ? result.errors.filter((error) => fields.includes(error.field)) : [];
         if (bad.length) {
           revealErrors = true;
@@ -622,7 +660,10 @@
   document.addEventListener("input", (event) => {
     const previousFabric = draft ? draft.fabricId : "";
     readInputs();
-    if (draft && event.target && event.target.dataset.w === "fabricId" && draft.fabricId !== previousFabric) draft.colorNumber = "";
+    if (draft && event.target && event.target.dataset.w === "fabricId" && draft.fabricId !== previousFabric) {
+      draft.colorNumber = "";
+      if (phase === "edit") { persist(); render(); return; }
+    }
     if (phase === "edit" || phase === "customer") {
       persist();
       const calc = document.querySelector("#calc");
