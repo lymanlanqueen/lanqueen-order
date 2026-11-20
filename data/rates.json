@@ -13,6 +13,13 @@
       "rateCny": 4.8592,
       "rateDate": "2026-06-01",
       "source": "Bank of China"
+    },
+    {
+      "currency": "CAD",
+      "rateCny": 5,
+      "rateDate": null,
+      "placeholder": true,
+      "source": "待确认/估算 To be confirmed / estimate"
     }
   ]
 }

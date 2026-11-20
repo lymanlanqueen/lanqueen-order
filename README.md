@@ -17,6 +17,8 @@ On this repository you can also turn on Pages → Deploy from branch → `main` 
 
 `print.html` is for the studio. Customers do not need it. The confirmation page on the form also has Print / Save PDF.
 
-Prices are CNY finished price × actual fabric metres. USD 6.766 and AUD 4.8592 (2026-06-01) are estimates only. The page states that the final amount uses the Bank of China rate on the day of remittance.
+The curtain total is finished RMB per metre × fabric usage. 散剪面料价 Cut Fabric Price is shown and is not part of that total. Lining, when chosen, is Endura at its finished price (82.5 RMB/m in the current list) × the same usage × quantity. Hardware prices and the USD/AUD rates are placeholders, marked 待确认/估算 To be confirmed / estimate, and are not a formal quote. Foreign currency is converted from RMB.
+
+`node tools/build_catalog.js` rebuilds `data/catalog.json` from `tools/pricelist_full.txt`. `npm test` runs the order checks.
 
 Do not run a build. `js/lq.js` is already the same calculation module as the studio app.

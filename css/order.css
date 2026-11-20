@@ -61,6 +61,10 @@ textarea { min-height: 88px; }
 .calc .k { color: var(--brass); letter-spacing: .16em; font-size: 11px; }
 .calc .big { font-family: Georgia, serif; font-size: 32px; margin: 6px 0; }
 .warn { color: var(--red); font-size: 13px; }
+.estimate { color: var(--brass); font-weight: 700; font-size: 12px; }
+.err-inline { color: var(--red); font-size: 13px; line-height: 1.4; margin: 6px 0 0; }
+.err-inline:empty { display: none; }
+.recompute { border: 2px solid var(--red); background: #fdf2f2; padding: 10px 12px; }
 .errors { border: 1px solid #e7c1c1; background: #fdf2f2; color: var(--red); border-radius: 16px; padding: 10px 14px; font-size: 14px; }
 .bar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
@@ -90,7 +94,9 @@ button.btn:disabled { opacity: .45; }
 @page { size: A4; margin: 12mm; }
 .sheet { background: white; color: #1c1915; max-width: 190mm; margin: 0 auto 18px; padding: 8px 4px 18px; }
 .sheet h2 { font-size: 22px; margin: 0; font-family: Georgia, "Songti SC", serif; }
-.sheet table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sheet table, table.grid { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.grid th, table.grid td { border-bottom: 1px solid var(--line); padding: 4px; vertical-align: top; }
+table.grid input, table.grid select { min-width: 64px; }
 .sheet td, .sheet th { border-bottom: 1px solid #f0e7da; text-align: left; vertical-align: top; padding: 3px 6px 3px 0; font-weight: 400; }
 .sheet th { width: 34%; color: #6f675c; }
 .pkg { border: 1px dashed #1c1915; padding: 8px; font-size: 12px; margin-bottom: 8px; }
