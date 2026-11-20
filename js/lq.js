@@ -62,7 +62,9 @@ var LQ = (() => {
     matchModel: () => matchModel,
     normaliseDraw: () => normaliseDraw,
     parseHookHeight: () => parseHookHeight,
+    FREIGHT_NOTES: () => FREIGHT_NOTES,
     parsePaste: () => parsePaste,
+    quoteFreight: () => quoteFreight,
     parseDecimal: () => parseDecimal,
     recomputeOrder: () => recomputeOrder,
     resolveFabric: () => resolveFabric,
@@ -271,7 +273,12 @@ var LQ = (() => {
     const toUnit = unit === "mm" ? 1000 : unit === "cm" ? 100 : unit === "in" ? 1 / 0.0254 : unit === "yd" ? 1 / 0.9144 : 1;
     return { min: formatLimit(rangeM.min * toUnit), max: formatLimit(rangeM.max * toUnit), toUnit };
   }
-  var FREIGHT_NOTE = "Freight to be quoted / \u8FD0\u8D39\u53E6\u884C\u62A5\u4EF7";
+  var FREIGHT_NOTE = "Reference freight, subject to actual quote / \u53C2\u8003\u8FD0\u8D39\uFF0C\u4EE5\u5B9E\u9645\u62A5\u4EF7\u4E3A\u51C6";
+  var FREIGHT_NOTES = [
+    "Remote areas carry an extra remote-area surcharge. / \u504F\u8FDC\u5730\u533A\u53E6\u52A0\u504F\u8FDC\u9644\u52A0\u8D39\u3002",
+    "Packaging weight is included. / \u5305\u88C5\u91CD\u91CF\u5DF2\u8BA1\u5165\u3002",
+    "Sheers are light and are charged by volumetric weight. / \u7EB1\u5E18\u8F83\u8F7B\uFF0C\u6309\u4F53\u79EF\u91CD\u91CF\u8BA1\u8D39\u3002"
+  ];
   var DEFAULTS_NOTE = "Defaults applied, please confirm";
   var COM_NOTE = "Ship fabric after order confirmation; label parcel with order no. + location; lead time starts after fabric inspection; shortage/defects are the sender's responsibility.";
   function modelKey(value) {
@@ -367,6 +374,24 @@ var LQ = (() => {
       });
     });
     return { rows, errors, header, example };
+  }
+  function quoteFreight(country, weightKg, currency, rate, table) {
+    const book = table || { rates: [] };
+    const key = String(country || "").trim().toLowerCase();
+    const band = (book.rates || []).find((row) => (row.match || []).some((name) => String(name).trim().toLowerCase() === key));
+    const notes = book.notes || FREIGHT_NOTES;
+    const label = book.label || FREIGHT_NOTE;
+    if (!band) {
+      return { status: "quote", label, notes, cnyPerKg: null, cny: null, foreign: null, inOrderTotal: false };
+    }
+    const weight = weightKg == null || weightKg === "" ? null : Number(weightKg);
+    if (!(weight > 0)) {
+      return { status: "rate", label, notes, cnyPerKg: band.cnyPerKg, cny: null, foreign: null, inOrderTotal: false };
+    }
+    const cny = round2(weight * band.cnyPerKg);
+    const rateCny = rate && rate.rateCny ? Number(rate.rateCny) : null;
+    const foreign = currency && currency !== "CNY" && rateCny ? round2(cny / rateCny) : null;
+    return { status: "reference", label, notes, cnyPerKg: band.cnyPerKg, weightKg: weight, cny, foreign, currency: currency || "CNY", inOrderTotal: false };
   }
   function nominalFullness(fabricPerPleat) {
     if (fabricPerPleat === 22) return 1.9;

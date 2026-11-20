@@ -1,0 +1,12 @@
+{
+  "label": "Reference freight, subject to actual quote / 参考运费，以实际报价为准",
+  "notes": [
+    "Remote areas carry an extra remote-area surcharge. / 偏远地区另加偏远附加费。",
+    "Packaging weight is included. / 包装重量已计入。",
+    "Sheers are light and are charged by volumetric weight. / 纱帘较轻，按体积重量计费。"
+  ],
+  "rates": [
+    { "id": "AU", "cnyPerKg": 50, "match": ["australia", "au", "澳大利亚", "澳洲"] },
+    { "id": "US-CA", "cnyPerKg": 60, "match": ["usa", "us", "united states", "america", "canada", "ca", "美国", "加拿大"] }
+  ]
+}

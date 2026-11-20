@@ -14,6 +14,7 @@
   let lang = localStorage.getItem("lq-lang") || "en";
   let catalog = [];
   let rates = [];
+  let freightTable = { rates: [], notes: LQ.FREIGHT_NOTES, label: LQ.FREIGHT_NOTE };
   let phase = "customer";
   let step = 0;
   let editIndex = null;
@@ -26,7 +27,7 @@
   let revealErrors = false;
 
   function blankCustomer() {
-    return { name: "", country: "", city: "", address: "", email: "", messenger: "", deliveryDate: "", currency: "USD", tradeTerm: "FOB", shippingMethod: "fedex", freightCny: "0", po: "", endClient: "", shipSeparate: false, shipAddress: "", shipCity: "", shipCountry: "", unbranded: false, sheetEnglishOnly: false, remarks: "", widthBasis: "", film: "" };
+    return { name: "", country: "", city: "", address: "", email: "", messenger: "", deliveryDate: "", currency: "USD", tradeTerm: "FOB", shippingMethod: "fedex", estimatedWeightKg: "", po: "", endClient: "", shipSeparate: false, shipAddress: "", shipCity: "", shipCountry: "", unbranded: false, sheetEnglishOnly: false, remarks: "", widthBasis: "", film: "" };
   }
   function blankWindow() {
     return {
@@ -143,16 +144,28 @@
   function rateFor(currency) {
     return rates.find((rate) => rate.currency === currency) || null;
   }
+  function freightQuote() {
+    return LQ.quoteFreight(customer.country, LQ.parseDecimal(customer.estimatedWeightKg), customer.currency, rateFor(customer.currency), freightTable);
+  }
+  function freightHtml() {
+    const quote = freightQuote();
+    let body = "<div class='card' id='freight'><p><b>" + esc(quote.label) + "</b></p>";
+    body += "<p class='note'>" + quote.notes.map((note) => esc(note)).join("<br>") + "</p>";
+    if (quote.status === "quote") body += "<p>To be quoted / 待报价</p>";
+    else if (quote.status === "rate") body += "<p>" + esc(LQ.REFERENCE_MARK) + " · ¥" + quote.cnyPerKg + "/kg</p>";
+    else body += "<p>" + esc(LQ.REFERENCE_MARK) + " · " + quote.weightKg + " kg × ¥" + quote.cnyPerKg + "/kg = ¥" + quote.cny.toFixed(2) + (quote.foreign != null ? " · " + esc(customer.currency) + " " + quote.foreign.toFixed(2) : "") + "</p><p class='note'>Not included in the order total. / 不计入订单合计。</p>";
+    return body + "</div>";
+  }
   function buildOrder() {
     const lines = windows.map((item) => {
       const fabric = fabricById(item.fabricId, item.colorNumber);
       const result = LQ.computeWindow(toInput(item), fabric, rules(), LQ.DEFAULT_HARDWARE_PRICES);
       return { input: toInput(item), result, fabric };
     });
-    const freightCny = Math.round((LQ.parseDecimal(customer.freightCny) || 0) * 100) / 100;
-    const cnyTotal = Math.round((lines.reduce((sum, line) => sum + line.result.pricing.lineCny, 0) + freightCny) * 100) / 100;
+    const cnyTotal = Math.round(lines.reduce((sum, line) => sum + line.result.pricing.lineCny, 0) * 100) / 100;
     const quote = rateFor(customer.currency);
     const settlement = LQ.settle(cnyTotal, customer.currency, quote, null);
+    const freight = freightQuote();
     return {
       number: orderNumber(),
       createdAt: new Date().toISOString(),
@@ -160,7 +173,7 @@
       customer: { ...customer },
       currency: customer.currency,
       cnyTotal,
-      freightCny,
+      freight,
       freightNote: LQ.FREIGHT_NOTE,
       presentation: { englishOnly: customer.sheetEnglishOnly === true || customer.sheetEnglishOnly === "true", hideLogo: customer.unbranded === true || customer.unbranded === "true" },
       settlement,
@@ -223,7 +236,8 @@
       field("Customer PO / Job No.", "客户单号", "<input data-c='po' value='" + esc(customer.po) + "'>") +
       field("End client (optional)", "终端客户（选填）", "<input data-c='endClient' value='" + esc(customer.endClient) + "'>") +
       "</div>" +
-      "<p class='note'><b>" + esc(LQ.FREIGHT_NOTE) + "</b></p>" +
+      field("Estimated weight (kg)", "预估重量（公斤）", "<input data-c='estimatedWeightKg' inputmode='decimal' value='" + esc(customer.estimatedWeightKg) + "'>") +
+      freightHtml() +
       "<p><label><input type='checkbox' data-c='shipSeparate'" + (customer.shipSeparate ? " checked" : "") + "> Separate ship-to / drop-ship address / 另填收货地址</label></p>" +
       (customer.shipSeparate ? field("Ship-to address", "收货地址", "<textarea data-c='shipAddress'>" + esc(customer.shipAddress) + "</textarea>") + "<div class='grid2'>" + field("Ship-to city", "收货城市", "<input data-c='shipCity' value='" + esc(customer.shipCity) + "'>") + field("Ship-to country", "收货国家", "<input data-c='shipCountry' value='" + esc(customer.shipCountry) + "'>") + "</div>" : "") +
       "<p><label><input type='checkbox' data-c='sheetEnglishOnly'" + (customer.sheetEnglishOnly ? " checked" : "") + "> English-only customer sheet / 客户单仅英文</label></p>" +
@@ -387,7 +401,7 @@
         cell(index, "Unit", "<select data-row='" + index + "' data-field='unit'>" + Object.keys(LQ.UNIT_LABEL).map((unit) => "<option value='" + unit + "'" + (item.unit === unit ? " selected" : "") + ">" + unit + "</option>").join("") + "</select>") +
         cell(index, "Qty", "<input data-row='" + index + "' data-field='quantity' value='" + esc(item.quantity) + "'>") +
         "<label class='wide' title='" + esc(LQ.HEADING_LABEL[(item.heading || LQ.normaliseHeading(item).key) || "double_pinch"].en) + "'><span>Heading</span><select data-row='" + index + "' data-field='heading'>" + LQ.HEADING_ORDER.map((key) => "<option value='" + key + "'" + ((item.heading || LQ.normaliseHeading(item).key) === key ? " selected" : "") + " title='" + esc(LQ.HEADING_LABEL[key].en + " " + LQ.HEADING_LABEL[key].zh) + "'>" + esc(LQ.HEADING_LABEL[key].en) + "</option>").join("") + "</select></label>" +
-        cell(index, "Film", "<select data-row='" + index + "' data-field='fabricPerPleat'><option value=''" + (filmValue === "" || filmValue == null ? " selected" : "") + ">Choose</option>" + ((item.heading === "knife") ? [22, 30] : [22, 24, 30]).map((film) => "<option value='" + film + "'" + (Number(filmValue) === film ? " selected" : "") + ">" + film + " cm</option>").join("") + "</select>") +
+        cell(index, "Film", (item.heading === "grommet" ? "<p class='note'>30 cm (fixed)</p>" : "<select data-row='" + index + "' data-field='fabricPerPleat'><option value=''" + (filmValue === "" || filmValue == null ? " selected" : "") + ">Choose</option>" + ((item.heading === "knife") ? [22, 30] : [22, 24, 30]).map((film) => "<option value='" + film + "'" + (Number(filmValue) === film ? " selected" : "") + ">" + film + " cm</option>").join("") + "</select>")) +
         cell(index, "Basis", "<select data-row='" + index + "' data-field='widthBasis'><option value=''" + (!item.widthBasis ? " selected" : "") + ">Order</option><option value='track'" + (item.widthBasis === "track" ? " selected" : "") + ">Track</option><option value='finished'" + (item.widthBasis === "finished" ? " selected" : "") + ">Finished</option></select>") +
         cell(index, "Open", "<select data-row='" + index + "' data-field='draw'>" + Object.keys(LQ.DRAW_LABEL).map((key) => "<option value='" + key + "'" + (item.draw === key ? " selected" : "") + ">" + LQ.DRAW_LABEL[key].en + "</option>").join("") + "</select>") +
         cell(index, "L", "<input data-row='" + index + "' data-field='leftWidth' value='" + esc(item.leftWidth) + "'>") +
@@ -408,7 +422,7 @@
       "<p><button class='btn brass' type='button' data-act='add-row'>" + t("Add row", "加一行") + "</button></p>" +
       "<label class='field'>" + bi("Paste from Excel", "从 Excel 粘贴") + "<textarea id='paste'></textarea></label>" +
       "<p><button class='btn alt' type='button' data-act='paste'>" + t("Import rows", "导入") + "</button></p>" +
-      "<p><b>CNY ¥" + total.toFixed(2) + "</b> · " + esc(LQ.FREIGHT_NOTE) + " · " + esc(LQ.REFERENCE_MARK) + "</p>";
+      "<p><b>CNY ¥" + total.toFixed(2) + "</b> · goods only / 货款合计</p>" + freightHtml();
   }
 
   function reviewView() {
@@ -664,6 +678,11 @@
       draft.colorNumber = "";
       if (phase === "edit") { persist(); render(); return; }
     }
+    if (phase === "customer" && event.target && (event.target.dataset.c === "country" || event.target.dataset.c === "estimatedWeightKg")) {
+      persist();
+      render();
+      return;
+    }
     if (phase === "edit" || phase === "customer") {
       persist();
       const calc = document.querySelector("#calc");
@@ -681,9 +700,10 @@
     } catch (error) { /* ignore a broken draft */ }
   }
 
-  Promise.all([fetch("data/catalog.json").then((r) => r.json()), fetch("data/rates.json").then((r) => r.json())]).then(([fabrics, rateFile]) => {
+  Promise.all([fetch("data/catalog.json").then((r) => r.json()), fetch("data/rates.json").then((r) => r.json()), fetch("data/freight.json").then((r) => r.json())]).then(([fabrics, rateFile, freightFile]) => {
     catalog = fabrics;
     rates = rateFile.rates;
+    freightTable = freightFile;
     if (location.hash === "#confirm" && sessionStorage.getItem("lq-confirm")) phase = "confirm";
     render();
   }).catch(() => {
