@@ -45,6 +45,7 @@ var LQ = (() => {
     ESTIMATE_MARK: () => ESTIMATE_MARK,
     INPUT_LIMITS: () => INPUT_LIMITS,
     NOT_A_QUOTE: () => NOT_A_QUOTE,
+    HARDWARE_PRICE_NOTE: () => HARDWARE_PRICE_NOTE,
     computeWindow: () => computeWindow,
     HEADING_LABEL: () => HEADING_LABEL,
     HEADING_ORDER: () => HEADING_ORDER,
@@ -67,6 +68,7 @@ var LQ = (() => {
     parsePaste: () => parsePaste,
     quoteFreight: () => quoteFreight,
     reviewIssues: () => reviewIssues,
+    reviewWarnings: () => reviewWarnings,
     parseDecimal: () => parseDecimal,
     recomputeOrder: () => recomputeOrder,
     resolveFabric: () => resolveFabric,
@@ -409,6 +411,9 @@ var LQ = (() => {
     }
     return issues;
   }
+  function reviewWarnings(warnings) {
+    return (warnings || []).filter((warning) => warning.code !== "equal-split");
+  }
   function quoteFreight(country, weightKg, currency, rate, table) {
     const book = table || { rates: [] };
     const key = String(country || "").trim().toLowerCase();
@@ -459,6 +464,7 @@ var LQ = (() => {
     en: "Reference price (BOC conversion rate)",
     zh: "\u53C2\u8003\u4EF7\uFF08\u4E2D\u884C\u6298\u7B97\u4EF7\uFF09"
   };
+  var HARDWARE_PRICE_NOTE = "Hardware price is a reference price, pending confirmation / \u4E94\u91D1\u4EF7\u4E3A\u53C2\u8003\u4EF7\uFF0C\u5F85\u786E\u8BA4";
   var LINING_PRICING = {
     usageMode: "same-as-face",
     usageFactor: 1,

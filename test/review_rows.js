@@ -74,7 +74,7 @@ function sheet(item) {
 const fixedSheet = sheet(one);
 const knifeSheet = sheet(knife);
 const evoSheet = sheet(evo);
-check("fixed-width sheets hide fullness", !/Fullness \(actual\)/.test(fixedSheet) && /Fullness \(actual\)/.test(sheet(good)));
+check("fixed-width sheets hide fullness and the reference multiple", !/Fullness \(actual\)|Reference \d|reference \d/.test(fixedSheet) && /Fullness \(actual\)/.test(sheet(good)));
 const knifeText = (knifeSheet + evoSheet + LQSheet.orderToText({
   number: "LQ-T", currency: "CNY", cnyTotal: knife.result.pricing.lineCny, freightNote: LQ.FREIGHT_NOTE,
   customer: { name: "Dealer", country: "Australia", city: "City", address: "1 St", tradeTerm: "FOB", shippingMethod: "fedex", deliveryDate: "2026-12-01" },
@@ -82,5 +82,13 @@ const knifeText = (knifeSheet + evoSheet + LQSheet.orderToText({
 })).split(LQ.ESTIMATE_MARK).join("");
 check("knife and EVO sheets are not marked pending", !/Pending confirmation|待确认/.test(knifeText));
 check("reference price wording", LQ.NOT_A_QUOTE.en + " / " + LQ.NOT_A_QUOTE.zh === "Reference price (BOC conversion rate) / 参考价（中行折算价）");
+check("hardware price note", LQ.HARDWARE_PRICE_NOTE === "Hardware price is a reference price, pending confirmation / 五金价为参考价，待确认");
+const orderSrc = fs.readFileSync(path.join(root, "js/order.js"), "utf8");
+check("step 8 hardware does not use the BOC label", orderSrc.includes("LQ.HARDWARE_PRICE_NOTE") && !/step === 7[\s\S]{0,700}NOT_A_QUOTE/.test(orderSrc) && !orderSrc.includes("ESTIMATE_MARK"));
+check("review foreign totals use the BOC phrase", /const foreign = preview\.settlement\.foreign[\s\S]{0,80}boc/.test(orderSrc) && /Hardware in that total[\s\S]{0,160}boc/.test(orderSrc));
+const split = run({ draw: "double", width: 3 });
+const even = run({ draw: "double", width: 3, equalSplitConfirmed: true });
+check("equal split still warns once in the result", split.result.warnings.some((warning) => warning.code === "equal-split") && split.result.usageMetersPerPiece === even.result.usageMetersPerPiece);
+check("review does not repeat the equal-split prompt", LQ.reviewWarnings(split.result.warnings).every((warning) => warning.code !== "equal-split") && LQ.reviewWarnings([{ code: "equal-split" }, { code: "fullness-tol" }]).length === 1);
 if (failed) { console.error(failed + " review-row checks failed"); process.exit(1); }
 console.log("review-row checks passed");
