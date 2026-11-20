@@ -72,7 +72,7 @@ const at10 = LQ.computeWindow(Object.assign({}, pinch, { hookSpacingCm: 10 }), f
 const at12 = LQ.computeWindow(Object.assign({}, pinch, { hookSpacingCm: 12 }), face, rules, prices);
 check("hook spacing locked", at10.totalCount === at12.totalCount && at10.usageMetersPerPiece === at12.usageMetersPerPiece && at10.hookSpacingCm === 10);
 const fullnessRow = LQ.computeWindow(Object.assign({}, pinch, { draw: "double", width: 3 }), face, rules, prices);
-check("actual fullness is usage divided by finished width", fullnessRow.fullnessDisplay === Math.round((fullnessRow.usageMetersPerPiece / (fullnessRow.widthCm / 100)) * 10) / 10);
+check("actual fullness excludes side hems", fullnessRow.fullnessDisplay === Math.round(((fullnessRow.cutWidthCm - fullnessRow.allowanceCm) / fullnessRow.widthCm) * 10) / 10 && fullnessRow.usageMetersPerPiece * 100 > fullnessRow.cutWidthCm - fullnessRow.allowanceCm);
 const wide = LQ.computeWindow(Object.assign({}, pinch, { draw: "double", width: 3, height: 2.8, hem: "8+8" }), LQ.resolveFabric(endura, null), rules, prices);
 const block = wide.errors.find((error) => error.code === "fixed-height");
 check("width check blocks", !!block && !wide.warnings.some((warning) => warning.code === "fixed-height") && /fixed-width/.test(block.en) && /定宽/.test(block.zh));

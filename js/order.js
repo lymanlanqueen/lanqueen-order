@@ -162,7 +162,7 @@
       const result = LQ.computeWindow(toInput(item), fabric, rules(), LQ.DEFAULT_HARDWARE_PRICES);
       return { input: toInput(item), result, fabric };
     });
-    const cnyTotal = Math.round(lines.reduce((sum, line) => sum + line.result.pricing.lineCny, 0) * 100) / 100;
+    const cnyTotal = Math.round(lines.reduce((sum, line) => sum + (line.result && Number.isFinite(line.result.pricing.lineCny) ? line.result.pricing.lineCny : 0), 0) * 100) / 100;
     const quote = rateFor(customer.currency);
     const settlement = LQ.settle(cnyTotal, customer.currency, quote, null);
     const freight = freightQuote();
@@ -221,11 +221,15 @@
     const backDisabled = phase === "customer" ? " disabled" : "";
     bar.innerHTML = err + "<div class='row' style='display:flex;justify-content:space-between;gap:12px'><button class='btn alt' type='button' data-act='back'" + backDisabled + ">" + t("Back", "上一步") + "</button>" + next + "</div>";
     document.querySelectorAll(".lang button").forEach((button) => button.classList.toggle("on", button.dataset.lang === lang));
+    if (highlightRows.length) {
+      const row = document.getElementById("row-" + highlightRows[0]);
+      if (row) row.scrollIntoView({ block: "center" });
+    }
   }
 
   function customerView() {
     const currencies = ["CNY"].concat(rates.map((rate) => rate.currency));
-    return "<h1>" + t("Who is this order for?", "您的联系与收货信息") + "</h1><p class='lede'>" + t("English first, Chinese alongside. A foreign-currency total stays an estimate until you remit.", "英文为主，中文对照。外币金额在汇款前都是估算。") + "</p><div class='grid2'>" +
+    return "<h1>" + t("Who is this order for?", "您的联系与收货信息") + "</h1><p class='lede'>" + t("English first, Chinese alongside.", "英文为主，中文对照。") + " " + esc(LQ.NOT_A_QUOTE.en) + " / " + esc(LQ.NOT_A_QUOTE.zh) + "</p><div class='grid2'>" +
       field("Name / company", "姓名 / 公司", "<input data-c='name' value='" + esc(customer.name) + "'>") +
       field("Country", "国家", "<input data-c='country' value='" + esc(customer.country) + "'>") +
       field("City", "城市", "<input data-c='city' value='" + esc(customer.city) + "'>") +
@@ -256,7 +260,7 @@
     const cards = windows.map((item, index) => {
       const fabric = fabricById(item.fabricId);
       const head = LQ.headingSummary(toInput(item));
-      return "<article class='card'><p class='note'>" + t("Window", "窗位") + " " + (index + 1) + "</p><h2 style='margin:4px 0'>" + esc(item.name || t("Untitled", "未命名")) + "</h2><p>" + (fabric ? esc(fabric.model) + " · " + esc(fabric.version) : t("No fabric", "未选面料")) + " · " + esc(item.width || "—") + " × " + esc(item.height || "—") + " " + esc(item.unit) + " · ×" + esc(item.quantity) + "</p><p>" + esc(head.en) + " / " + esc(head.zh) + "</p><button class='btn alt' type='button' data-act='edit' data-index='" + index + "'>" + t("Edit", "修改") + "</button> <button class='btn alt' type='button' data-act='dup' data-index='" + index + "'>" + t("Clone", "复制") + "</button> <button class='btn alt' type='button' data-act='expand' data-index='" + index + "'>" + t("Expand quantity", "按数量拆行") + "</button> <button class='btn alt' type='button' data-act='remove' data-index='" + index + "'>" + t("Remove", "删除") + "</button></article>";
+      return "<article class='card'><p class='note'>" + t("Window", "窗位") + " " + (index + 1) + "</p><h2 style='margin:4px 0'>" + esc(item.location || item.name || (t("Window", "窗位") + " " + (index + 1))) + "</h2><p>" + (fabric ? esc(fabric.model) + " · " + esc(fabric.version) : t("No fabric", "未选面料")) + " · " + esc(item.width || "—") + " × " + esc(item.height || "—") + " " + esc(item.unit) + " · ×" + esc(item.quantity) + "</p><p>" + esc(head.en) + " / " + esc(head.zh) + "</p><button class='btn alt' type='button' data-act='edit' data-index='" + index + "'>" + t("Edit", "修改") + "</button> <button class='btn alt' type='button' data-act='dup' data-index='" + index + "'>" + t("Clone", "复制") + "</button> <button class='btn alt' type='button' data-act='expand' data-index='" + index + "'>" + t("Expand quantity", "按数量拆行") + "</button> <button class='btn alt' type='button' data-act='remove' data-index='" + index + "'>" + t("Remove", "删除") + "</button></article>";
     }).join("");
     return "<h1>" + t("Windows", "窗位") + "</h1><p class='lede'>" + t("One card per window. Use quantity when several windows are identical.", "每个窗户单独做一条。相同规格可以填数量。") + "</p>" +
       (windows.length ? cards : "<p class='card'>" + t("No windows yet. Start with the living room or the main bedroom.", "还没有窗位。从客厅或主卧开始。") + "</p>") +
@@ -273,7 +277,7 @@
         body += "<div class='choices'>" + rules.enabledRippleTapes.map((tape) => choice(draft.rippleTape === tape, "data-wset='rippleTape' data-value='" + tape + "'", bi(LQ.TAPE_LABEL[tape].en, LQ.TAPE_LABEL[tape].zh))).join("") + "</div>";
       }
       if (headingNow === "knife") {
-        body += "<figure class='knife-help'><img src='assets/knife-pleat.jpg' alt='Knife Pleat'><figcaption>Knife Pleat / 刀型褶. Usage and runner rule pending confirmation. / 用料和滑车规则待确认。</figcaption></figure>";
+        body += "<figure class='knife-help'><img src='assets/knife-pleat.jpg' alt='Knife Pleat'><figcaption>Knife Pleat / 刀型褶. 22 cm film is 2.2×, 30 cm film is 3.0×, plus 15 cm per panel. / 22 厘米纸膜 2.2 倍，30 厘米纸膜 3.0 倍，每片另加 15 厘米。</figcaption></figure>";
       }
       body += "<div class='choices'>" + Object.keys(LQ.ORIENTATION_LABEL).map((key) => choice(draft.orientation === key, "data-wset='orientation' data-value='" + key + "'", bi(LQ.ORIENTATION_LABEL[key].en, LQ.ORIENTATION_LABEL[key].zh))).join("") + "</div>";
       body += "<div class='choices'>" + Object.keys(LQ.LINING_LABEL).map((key) => choice(draft.lining === key, "data-wset='lining' data-value='" + key + "'", bi(LQ.LINING_LABEL[key].en, LQ.LINING_LABEL[key].zh))).join("") + "</div>";
@@ -393,7 +397,7 @@
       const warn = result ? result.warnings.map((warning) => warning.en).join("; ") : "";
       const err = result ? result.errors.map((error) => error.en).join("; ") : "";
       const filmValue = item.fabricPerPleat === "" || item.fabricPerPleat == null ? customer.film : item.fabricPerPleat;
-      return "<article class='batch-row'>" +
+      return "<article class='batch-row" + (highlightRows.indexOf(index) >= 0 ? " bad" : "") + "' id='row-" + index + "'>" +
         cell(index, "Model", "<input data-row='" + index + "' data-field='fabricId' value='" + esc(item.fabricId) + "' placeholder='Masal'>") +
         cell(index, "Colour No.", "<input data-row='" + index + "' data-field='colorNumber' value='" + esc(item.colorNumber) + "'>") +
         cell(index, "Width", "<input data-row='" + index + "' data-field='width' value='" + esc(item.width) + "'>") +
@@ -408,9 +412,9 @@
         cell(index, "R", "<input data-row='" + index + "' data-field='rightWidth' value='" + esc(item.rightWidth) + "'>") +
         cell(index, "Location", "<input data-row='" + index + "' data-field='location' value='" + esc(item.location || item.name) + "'>") +
         "<p class='batch-actions'><button type='button' class='btn alt' data-act='dup' data-index='" + index + "'>Clone</button> <button type='button' class='btn alt' data-act='expand' data-index='" + index + "'>Expand</button> <button type='button' class='btn alt' data-act='remove' data-index='" + index + "'>Del</button></p>" +
-        "<p class='note batch-note'>" + esc(result ? result.usageMetersPerPiece + " m · ¥" + result.pricing.lineCny.toFixed(2) : "") + (warn ? " · " + esc(warn) : "") + (err ? " · " + esc(err) : "") + (item.modelError ? " · " + esc(item.modelError) : "") + "</p></article>";
+        "<p class='note batch-note'>" + rowSummary(item, result) + "</p></article>";
     }).join("");
-    const total = windows.reduce((sum, item) => { const result = computeDraft(item); return sum + (result ? result.pricing.lineCny : 0); }, 0);
+    const total = windows.reduce((sum, item) => { const result = computeDraft(item); const money = result && Number.isFinite(result.pricing.lineCny) && !result.errors.some((error) => error.code === "fpp") ? result.pricing.lineCny : 0; return sum + money; }, 0);
     return "<h1>" + t("Table", "表格") + "</h1>" +
       "<div class='grid2'>" +
       "<label class='field'>" + bi("Order width basis (required)", "整单宽度基准（必选）") + "<select data-c='widthBasis'><option value=''" + (!customer.widthBasis ? " selected" : "") + ">Choose</option><option value='track'" + (customer.widthBasis === "track" ? " selected" : "") + ">Track</option><option value='finished'" + (customer.widthBasis === "finished" ? " selected" : "") + ">Finished</option></select></label>" +
@@ -425,15 +429,27 @@
       "<p><b>CNY ¥" + total.toFixed(2) + "</b> · goods only / 货款合计</p>" + freightHtml();
   }
 
+  function rowSummary(item, result) {
+    const issues = LQ.reviewIssues(toInput(item), result, fabricById(item.fabricId, item.colorNumber), item.modelError, (rules().catalog || catalog));
+    if (issues.length) return issues.map((issue) => issue.en + " / " + issue.zh).join("; ");
+    if (!result || !Number.isFinite(result.pricing.lineCny)) return "Please select film / 请选纸膜";
+    return result.usageMetersPerPiece + " m · ¥" + result.pricing.lineCny.toFixed(2);
+  }
+  let highlightRows = [];
   function reviewView() {
     const preview = buildOrder();
     preview.number = t("Assigned on submit", "提交时生成");
     const cards = preview.windows.map((line, index) => {
-      const lining = line.result.lining && line.result.lining.id !== "none" ? "<p>" + t("Lining", "里布") + " " + line.result.lining.usageMeters + " m × " + line.input.quantity + " × ¥" + line.result.lining.rate + " = ¥" + line.result.pricing.liningCny.toFixed(2) + "</p>" : "";
-      const cut = line.fabric && line.fabric.fabricPriceCnyPerM != null ? "<p>" + esc(LQ.CUT_FABRIC_LABEL) + " ¥" + line.fabric.fabricPriceCnyPerM + "/m · not included in the curtain total / 不计入窗帘合计</p>" : "";
-      return "<article class='card'><h2 style='margin:0 0 6px'>" + (index + 1) + ". " + esc(line.input.name) + "</h2><p>" + esc(LQ.headingSummary(line.input).en) + " · " + line.result.widthCm + " × " + line.result.heightCm + " cm · ×" + line.input.quantity + "</p><p>" + esc(line.fabric.model) + " " + esc(line.fabric.version) + "</p>" + cut + "<p>" + t("Curtain", "窗帘") + " " + line.result.usageMetersPerPiece + " m × " + line.input.quantity + " × ¥" + line.result.pricing.priceCnyPerM + " = ¥" + line.result.pricing.curtainCny.toFixed(2) + "</p>" + lining + "<p>" + t("Line", "本窗") + " ¥" + line.result.pricing.lineCny.toFixed(2) + "</p>" + line.result.warnings.map((warning) => "<p class='warn'>" + esc(warning.en) + " / " + esc(warning.zh) + "</p>").join("") + "</article>";
+      const result = line.result || { warnings: [], pricing: {}, widthCm: 0, heightCm: 0, usageMetersPerPiece: 0, fullnessDisplay: 0 };
+      const fabric = line.fabric || { model: line.input.fabricId || "—", version: "", fabricPriceCnyPerM: null };
+      const lining = result.lining && result.lining.id !== "none" && Number.isFinite(result.pricing.liningCny) ? "<p>" + t("Lining", "里布") + " " + result.lining.usageMeters + " m × " + line.input.quantity + " × ¥" + result.lining.rate + " = ¥" + Number(result.pricing.liningCny).toFixed(2) + "</p>" : "";
+      const cut = fabric.fabricPriceCnyPerM != null ? "<p>" + esc(LQ.CUT_FABRIC_LABEL) + " ¥" + fabric.fabricPriceCnyPerM + "/m · not included in the curtain total / 不计入窗帘合计</p>" : "";
+      const priced = Number.isFinite(result.pricing.curtainCny) && Number.isFinite(result.pricing.lineCny);
+      const money = priced ? "<p>" + t("Curtain", "窗帘") + " " + result.usageMetersPerPiece + " m × " + line.input.quantity + " × ¥" + result.pricing.priceCnyPerM + " = ¥" + result.pricing.curtainCny.toFixed(2) + "</p>" + lining + "<p>" + t("Line", "本窗") + " ¥" + result.pricing.lineCny.toFixed(2) + "</p>" : "<p class='warn'>Please select film / 请选纸膜</p>";
+      const label = line.input.location || line.input.name || (t("Window", "窗位") + " " + (index + 1));
+      return "<article class='card'><h2 style='margin:0 0 6px'>" + (index + 1) + ". " + esc(label) + "</h2><p>" + esc((LQ.headingSummary(line.input) || { en: "" }).en) + " · " + result.widthCm + " × " + result.heightCm + " cm · ×" + line.input.quantity + "</p><p>" + esc(fabric.model) + " " + esc(fabric.version) + "</p>" + cut + money + (result.warnings || []).map((warning) => "<p class='warn'>" + esc(warning.en) + " / " + esc(warning.zh) + "</p>").join("") + "</article>";
     }).join("");
-    const hardwareCny = preview.windows.reduce((sum, line) => sum + line.result.pricing.trackCny + line.result.pricing.motorCny + line.result.pricing.tiebackCny, 0);
+    const hardwareCny = preview.windows.reduce((sum, line) => { const pricing = line.result && line.result.pricing; if (!pricing || !Number.isFinite(pricing.trackCny)) return sum; return sum + (pricing.trackCny || 0) + (pricing.motorCny || 0) + (pricing.tiebackCny || 0); }, 0);
     const foreign = preview.settlement.foreign != null ? "<p class='estimate'>" + esc(LQ.ESTIMATE_MARK) + "</p><p>" + preview.currency + " " + preview.settlement.foreign.toFixed(2) + "</p>" : "";
     return "<h1>" + t("Review and send", "核对后提交") + "</h1><p>" + esc(customer.name) + " · " + esc(customer.city) + ", " + esc(customer.country) + "<br>" + esc(customer.tradeTerm) + " · " + esc(customer.currency) + " · " + esc(customer.deliveryDate) + "</p>" + cards +
       "<div class='card' style='background:#1e3a34;color:#f7f3ea'><p>" + t("Total in CNY", "人民币合计") + " ¥" + preview.cnyTotal.toFixed(2) + "</p><p>" + t("Hardware in that total", "其中五金") + " ¥" + hardwareCny.toFixed(2) + " · " + esc(LQ.ESTIMATE_MARK) + "</p>" + foreign + "<p class='note'>" + esc(LQ.NOT_A_QUOTE.en) + " / " + esc(LQ.NOT_A_QUOTE.zh) + "</p><p class='note'>" + esc(LQ.FX_NOTE) + "</p></div>" + errorList();
@@ -456,23 +472,28 @@
     const result = active ? computeDraft(active) : null;
     const saved = windows.reduce((sum, item) => {
       const computed = computeDraft(item);
-      return sum + (computed ? computed.pricing.lineCny : 0);
+      const money = computed && Number.isFinite(computed.pricing.lineCny) && !computed.errors.some((error) => error.code === "fpp") ? computed.pricing.lineCny : 0;
+      return sum + money;
     }, 0);
     const settlement = LQ.settle(Math.round(saved * 100) / 100, customer.currency, rateFor(customer.currency), null);
     let html = "<p class='k'>CALCULATION</p>";
     if (result) {
       const blocked = result.errors.find((error) => error.code === "fixed-height");
       if (blocked) html += "<div class='errors' data-block='fixed-height'><b>" + esc(blocked.en) + "</b><br>" + esc(blocked.zh) + "<br>This window cannot be submitted. / 此窗无法提交。</div>";
-      html += "<p class='big'>" + result.usageMetersPerPiece.toFixed(3) + " m</p><p class='note'>" + t("Face fabric used for the curtain price, per piece", "窗帘成品价按此用料") + "</p>";
-      html += "<p>" + t("Cut width", "裁宽") + " " + result.cutWidthCm + " cm</p>";
-      html += "<p>Fullness (actual) = usage ÷ finished width " + Number(result.fullnessDisplay).toFixed(1) + "</p>";
-      if (result.nominalFullness) html += "<p class='note'>Reference " + result.nominalFullness + "×</p>";
-      html += "<p>" + (result.totalGliders ? t("Gliders", "滑轮") + " " + result.totalGliders + " · " + t("Folds", "褶") + " " + result.totalCount : result.totalRings ? t("Rings", "环") + " " + result.totalRings + " · " + t("Folds", "褶") + " " + result.totalCount : t("Pleats", "褶") + " " + result.totalCount + " · " + t("Hooks", "钩") + " " + result.totalHooks) + "</p>";
-      if (active.fabricId && result.pricing.priceCnyPerM) html += "<p>" + t("Curtain", "窗帘") + " ¥" + result.pricing.curtainCny.toFixed(2) + "</p>";
-      if (result.pricing.cutFabricCnyPerM != null) html += "<p class='note'>" + esc(LQ.CUT_FABRIC_LABEL) + " ¥" + result.pricing.cutFabricCnyPerM + "/m · not included in the curtain total / 不计入窗帘合计</p>";
-      if (result.lining && result.lining.id !== "none") html += "<p>" + t("Lining", "里布") + " " + result.lining.usageMeters + " m × ¥" + result.lining.rate + " = ¥" + result.pricing.liningCny.toFixed(2) + "</p>";
-      if (result.pricing.trackCny || result.pricing.motorCny) html += "<p class='estimate'>" + esc(LQ.REFERENCE_MARK) + " · " + t("Hardware", "五金") + " ¥" + (result.pricing.trackCny + result.pricing.motorCny).toFixed(2) + "</p>";
-      if (active.fabricId) html += "<p>" + t("This window", "本窗") + " ¥" + result.pricing.lineCny.toFixed(2) + "</p>";
+      const filmMissing = !Number.isFinite(result.usageMetersPerPiece) || result.errors.some((error) => error.code === "fpp");
+      if (filmMissing) html += "<p class='warn'>Please select film / 请选纸膜</p>";
+      else {
+        html += "<p class='big'>" + result.usageMetersPerPiece.toFixed(3) + " m</p><p class='note'>" + t("Face fabric used for the curtain price, per piece", "窗帘成品价按此用料") + "</p>";
+        html += "<p>" + t("Cut width", "裁宽") + " " + result.cutWidthCm + " cm</p>";
+        if (!active || active.orientation !== "fixed-width") html += "<p>Fullness (actual) = (usage − side hems) ÷ finished width " + Number(result.fullnessDisplay).toFixed(1) + "</p>";
+        if (result.nominalFullness) html += "<p class='note'>Reference " + result.nominalFullness + "×</p>";
+        html += "<p>" + (result.totalGliders ? t("Gliders", "滑轮") + " " + result.totalGliders + " · " + t("Folds", "褶") + " " + result.totalCount : result.totalRings ? t("Rings", "环") + " " + result.totalRings + " · " + t("Folds", "褶") + " " + result.totalCount : t("Pleats", "褶") + " " + result.totalCount + " · " + t("Hooks", "钩") + " " + result.totalHooks) + "</p>";
+        if (active.fabricId && result.pricing.priceCnyPerM) html += "<p>" + t("Curtain", "窗帘") + " ¥" + result.pricing.curtainCny.toFixed(2) + "</p>";
+        if (result.pricing.cutFabricCnyPerM != null) html += "<p class='note'>" + esc(LQ.CUT_FABRIC_LABEL) + " ¥" + result.pricing.cutFabricCnyPerM + "/m · not included in the curtain total / 不计入窗帘合计</p>";
+        if (result.lining && result.lining.id !== "none") html += "<p>" + t("Lining", "里布") + " " + result.lining.usageMeters + " m × ¥" + result.lining.rate + " = ¥" + result.pricing.liningCny.toFixed(2) + "</p>";
+        if (result.pricing.trackCny || result.pricing.motorCny) html += "<p class='estimate'>" + esc(LQ.REFERENCE_MARK) + " · " + t("Hardware", "五金") + " ¥" + (result.pricing.trackCny + result.pricing.motorCny).toFixed(2) + "</p>";
+        if (active.fabricId && Number.isFinite(result.pricing.lineCny)) html += "<p>" + t("This window", "本窗") + " ¥" + result.pricing.lineCny.toFixed(2) + "</p>";
+      }
       shownErrors(result).filter((error) => error.code !== "fixed-height").forEach((error) => { html += "<p class='warn'>" + esc(error.en) + " / " + esc(error.zh) + "</p>"; });
       result.warnings.forEach((warning) => { html += "<p class='warn'>" + esc(warning.en) + " / " + esc(warning.zh) + "</p>"; });
     } else html += "<p class='note'>" + t("Enter width and height to see the cloth usage.", "填好宽高后，这里会显示用料。") + "</p>";
@@ -518,7 +539,7 @@
     problems = customerErrors();
     windows.forEach((item, index) => {
       const result = LQ.computeWindow(toInput(item), fabricById(item.fabricId, item.colorNumber), rules(), LQ.DEFAULT_HARDWARE_PRICES);
-      result.errors.forEach((error) => problems.push(t("Window", "窗位") + " " + (index + 1) + ": " + error.en + " / " + error.zh));
+      LQ.reviewIssues(toInput(item), result, fabricById(item.fabricId, item.colorNumber), item.modelError, (rules().catalog || catalog)).forEach((issue) => problems.push(t("Window", "窗位") + " " + (index + 1) + ": " + issue.en + " / " + issue.zh));
     });
     if (!windows.length) problems.push(t("Add at least one window.", "请至少添加一个窗位。"));
     if (problems.length) { render(); return; }
@@ -642,7 +663,27 @@
     }
     if (action === "edit") { editIndex = Number(act.dataset.index); draft = { ...windows[editIndex] }; step = 0; phase = "edit"; problems = []; }
     if (action === "remove") windows.splice(Number(act.dataset.index), 1);
-    if (action === "review") phase = "review";
+    if (action === "review") {
+      highlightRows = [];
+      const bad = [];
+      windows.forEach((item, index) => {
+        const result = computeDraft(item);
+        const issues = LQ.reviewIssues(toInput(item), result, fabricById(item.fabricId, item.colorNumber), item.modelError, (rules().catalog || catalog));
+        if (issues.length) bad.push(index);
+      });
+      if (bad.length) {
+        highlightRows = bad;
+        phase = "table";
+        problems = bad.map((index) => {
+          const item = windows[index];
+          const issues = LQ.reviewIssues(toInput(item), computeDraft(item), fabricById(item.fabricId, item.colorNumber), item.modelError, (rules().catalog || catalog));
+          return "Row " + (index + 1) + " / 第 " + (index + 1) + " 行: " + issues.map((issue) => issue.en + " / " + issue.zh).join("; ");
+        });
+      } else {
+        problems = [];
+        phase = "review";
+      }
+    }
     if (action === "next") {
       if (step < STEPS.length - 1) {
         const result = draftResultSafe();

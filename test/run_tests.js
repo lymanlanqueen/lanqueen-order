@@ -65,14 +65,14 @@ function ref(c) {
   let usageCm = cut;
   let drops = null;
   if (c.orientation === "fixed-width") {
-    const cutDrop = H + HEM[c.hem] + (c.topFinish === "fold-8" ? 8 : 0);
+    const cutDrop = H + 30;
     const bolt = fab(c.fabricId).widthCm;
     const perPanelCut = cut / pan;
     drops = Math.ceil(+(perPanelCut / bolt).toFixed(9)) * pan;
     usageCm = drops * cutDrop;
   }
   return {
-    pleats, runners, pure, cut, full: W > 0 ? round1((+roundCm(usageCm) / 100) / (W / 100)) : 0,
+    pleats, runners, pure, cut, full: W > 0 ? round1((cut - 15 * pan) / W) : 0,
     usageM: +roundCm(usageCm) / 100, drops
   };
 }

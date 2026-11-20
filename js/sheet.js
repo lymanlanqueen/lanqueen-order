@@ -74,7 +74,7 @@
     html += row("Hardware / 五金", hardware(input));
     html += row(sheetEnglish ? "Fabric" : "Fabric / 面料", esc(fabric.model) + " · " + esc(fabric.version || "") + " · width " + widthM(fabric.widthCm) + (input.colorNumber != null && input.colorNumber !== "" ? " · colour no. " + esc(input.colorNumber) : "") + (factory ? "" : " · finished " + money(fabric.priceCnyPerM) + "/m"));
     if (!factory) html += row(LQ.CUT_FABRIC_LABEL, (fabric.fabricPriceCnyPerM == null ? "—" : money(fabric.fabricPriceCnyPerM) + "/m") + " · not included in the curtain total / 不计入窗帘合计");
-    if (!factory) html += row(LQ.DEFAULTS_NOTE, "Hem " + esc(input.hem || "8+2") + " · return " + esc(input.returnCm) + " cm · overlap " + esc(input.overlapCm) + " cm · fullness " + Number(result.fullnessDisplay).toFixed(1) + "x · runners/panel " + (result.runnersPerPanel || []).join(", "));
+    if (!factory) html += row(LQ.DEFAULTS_NOTE, "Hem " + esc(input.hem || "8+2") + " · return " + esc(input.returnCm) + " cm · overlap " + esc(input.overlapCm) + " cm" + (input.orientation === "fixed-width" ? "" : " · fullness " + Number(result.fullnessDisplay).toFixed(1) + "x") + " · runners/panel " + (result.runnersPerPanel || []).join(", "));
     if (input.fabricSource === "com" || (fabric && fabric.source === "com")) html += "<p class='note'>" + esc(LQ.COM_NOTE) + "</p>";
     const knife = result.calcRule === "knife-multiplier";
     const grommetFixed = result.calcRule === "grommet";
@@ -89,7 +89,7 @@
     if (input.hookHeight) html += row(sheetEnglish ? "Hook Height / 上冒" : "Hook Height / 上冒", esc(input.hookHeight) + (String(input.hookHeight).match(/mm|cm|毫米|厘米/i) ? "" : " " + esc(input.hookHeightUnit || "mm")));
     if (input.hookSpec) html += row(sheetEnglish ? "Hook spec / 钩子规格" : "Hook spec / 钩子规格", esc(input.hookSpec));
     html += row(sheetEnglish ? "Cut width" : "Cut width / 裁宽", result.cutWidthCm + " cm");
-    html += row(sheetEnglish ? "Fullness (actual) = usage ÷ finished width" : "Fullness (actual) = usage ÷ finished width / 实际丰满度", Number(result.fullnessDisplay).toFixed(1) + (result.nominalFullness ? " · reference " + result.nominalFullness + "×" : ""));
+    if (input.orientation !== "fixed-width") html += row(sheetEnglish ? "Fullness (actual) = (usage − side hems) ÷ finished width" : "Fullness (actual) = (usage − side hems) ÷ finished width / 实际丰满度", Number(result.fullnessDisplay).toFixed(1) + (result.nominalFullness ? " · reference " + result.nominalFullness + "×" : ""));
     html += row(sheetEnglish ? "Fabric usage" : "Fabric usage / 用料", result.usageMetersPerPiece + " m × " + esc(input.quantity) + " = " + result.usageMetersPriced + " m");
     if (!factory) {
       const com = input.fabricSource === "com" || result.pricing.priceQuoted === false;
@@ -200,7 +200,8 @@
       else lines.push("Pleats/folds/rings: " + result.totalCount + "  Gliders: " + (result.totalGliders ?? "—") + "  Runners per panel: " + (result.runnersPerPanel || []).join(", "));
       if (input.hookHeight) lines.push("Hook Height / 上冒: " + input.hookHeight + " " + (String(input.hookHeight).match(/mm|cm|毫米|厘米/i) ? "" : (input.hookHeightUnit || "mm")));
       if (input.hookSpec) lines.push("Hook spec / 钩子规格: " + input.hookSpec);
-      lines.push("Cut width cm: " + result.cutWidthCm + "  Fullness (actual) = usage ÷ finished width: " + result.fullnessDisplay);
+      if (input.orientation === "fixed-width") lines.push("Cut width cm: " + result.cutWidthCm);
+      else lines.push("Cut width cm: " + result.cutWidthCm + "  Fullness (actual) = (usage − side hems) ÷ finished width: " + result.fullnessDisplay);
       lines.push("Film cm: " + (result.calcRule === "grommet" ? "30 cm (fixed)" : (result.fabricPerPleat || "—")));
       lines.push("Fabric usage m (priced): " + result.usageMetersPriced + " (" + result.usageMetersPerPiece + " per piece, " + result.usageBasis + ")");
       lines.push("Curtain CNY: " + result.pricing.curtainCny + "  Lining: " + result.pricing.liningCny + "  Track: " + result.pricing.trackCny + " " + LQ.ESTIMATE_MARK + "  Motor: " + result.pricing.motorCny + " " + LQ.ESTIMATE_MARK + "  Line: " + result.pricing.lineCny);

@@ -65,6 +65,7 @@ var LQ = (() => {
     FREIGHT_NOTES: () => FREIGHT_NOTES,
     parsePaste: () => parsePaste,
     quoteFreight: () => quoteFreight,
+    reviewIssues: () => reviewIssues,
     parseDecimal: () => parseDecimal,
     recomputeOrder: () => recomputeOrder,
     resolveFabric: () => resolveFabric,
@@ -375,6 +376,27 @@ var LQ = (() => {
     });
     return { rows, errors, header, example };
   }
+  function reviewIssues(input, result, fabric, modelError, catalog) {
+    const issues = [];
+    let note = modelError || "";
+    if (!note && input && input.fabricId && !fabric) {
+      const matched = catalog ? matchModel(catalog, input.fabricId) : null;
+      note = matched && matched.en ? matched.en : "use the fabric model name, e.g. Masal";
+    }
+    if (note) issues.push({ en: note, zh: note === "use the fabric model name, e.g. Masal" ? "\u8BF7\u586B\u5199\u9762\u6599\u578B\u53F7\uFF0C\u4F8B\u5982 Masal" : "\u8BF7\u4FEE\u6B63\u8FD9\u4E00\u884C" });
+    if (!result) {
+      issues.push({ en: "Enter width and height", zh: "\u8BF7\u586B\u5199\u5BBD\u548C\u9AD8" });
+      return issues;
+    }
+    (result.errors || []).forEach((error) => {
+      if (error.code === "fpp") issues.push({ en: "Please select film", zh: "\u8BF7\u9009\u7EB8\u819C" });
+      else issues.push({ en: error.en, zh: error.zh });
+    });
+    if (!(result.pricing && Number.isFinite(result.pricing.lineCny)) && !issues.some((issue) => issue.en === "Please select film")) {
+      issues.push({ en: "Please select film", zh: "\u8BF7\u9009\u7EB8\u819C" });
+    }
+    return issues;
+  }
   function quoteFreight(country, weightKg, currency, rate, table) {
     const book = table || { rates: [] };
     const key = String(country || "").trim().toLowerCase();
@@ -422,8 +444,8 @@ var LQ = (() => {
   var ESTIMATE_MARK = "\u5F85\u786E\u8BA4/\u4F30\u7B97 To be confirmed / estimate";
   var REFERENCE_MARK = "Reference only / \u53C2\u8003\u4EF7";
   var NOT_A_QUOTE = {
-    en: "Hardware prices and exchange rates are placeholders. This is not a formal quote.",
-    zh: "\u4E94\u91D1\u4EF7\u683C\u4E0E\u6C47\u7387\u4E3A\u5360\u4F4D\u6570\u636E\uFF0C\u975E\u6B63\u5F0F\u62A5\u4EF7\u3002"
+    en: "Reference price (BOC conversion rate)",
+    zh: "\u53C2\u8003\u4EF7\uFF08\u4E2D\u884C\u6298\u7B97\u4EF7\uFF09"
   };
   var LINING_PRICING = {
     usageMode: "same-as-face",
@@ -889,7 +911,7 @@ var LQ = (() => {
       let cutDropCm = null;
       let usageCm2 = cutWidthCm2;
       if (input.orientation === "fixed-width") {
-        cutDropCm = roundCm(heightCm + hemUsageCm + topUsageCm);
+        cutDropCm = roundCm(heightCm + (rules.fixedWidthAddCm ?? 30));
         const bolt = fabric?.widthCm ?? 0;
         drops = bolt > 0 ? excelRoundUp(cutWidthCm2 / bolt) : 0;
         usageCm2 = roundCm(drops * cutDropCm);
@@ -924,8 +946,9 @@ var LQ = (() => {
     const qty = Number.isInteger(qtyValue) && qtyValue > 0 ? qtyValue : 0;
     const usageMetersPriced = round3(usageMetersPerPiece * qty);
     const widthMetres = widthCm / 100;
-    const fullness = widthMetres > 0 ? usageMetersPerPiece / widthMetres : 0;
-    const fullnessDisplay = widthMetres > 0 ? round1(usageMetersPerPiece / widthMetres) : 0;
+    const measurableCm = roundCm(cutWidthCm - allowanceCm);
+    const fullness = widthCm > 0 ? measurableCm / widthCm : 0;
+    const fullnessDisplay = widthCm > 0 ? round1(measurableCm / widthCm) : 0;
     const statedFullness = parseDecimal(input.orderedFullness);
     if (statedFullness != null && Number.isFinite(statedFullness) && Math.abs(fullnessDisplay - round1(statedFullness)) > 0.1 + 1e-9) {
       warnings.push(msg("fullness-tol", "stated fullness differs, please confirm (possible input error)", "\u5BA2\u6237\u586B\u5199\u7684\u4E30\u6EE1\u5EA6\u4E0E\u5B9E\u9645\u4E0D\u540C\uFF0C\u8BF7\u786E\u8BA4\uFF08\u53EF\u80FD\u662F\u586B\u5199\u6709\u8BEF\uFF09", "orderedFullness"));
@@ -1119,13 +1142,13 @@ var LQ = (() => {
       zh: `\u88C1\u5BBD = \u51C0\u6599 ${p.pureFabricCm} + \u635F\u8017 ${p.allowanceCm} + \u5305\u8FB9\u91CD\u53E0\u8D85\u51FA ${p.excessCm} = ${p.cutWidthCm} \u5398\u7C73`
     });
     lines.push({
-      en: `Fullness (actual) = usage \xF7 finished width = ${p.usageMetersPerPiece} \xF7 ${p.widthMetres} = ${p.fullnessDisplay}`,
-      zh: `\u5B9E\u9645\u4E30\u6EE1\u5EA6 = \u7528\u6599 \xF7 \u6210\u54C1\u5BBD = ${p.usageMetersPerPiece} \xF7 ${p.widthMetres} = ${p.fullnessDisplay}`
+      en: `Fullness (actual) = (usage \u2212 side hems) \xF7 finished width = ${p.fullnessDisplay}`,
+      zh: `\u5B9E\u9645\u4E30\u6EE1\u5EA6 = \uFF08\u7528\u6599 \u2212 \u5DE6\u53F3\u5377\u8FB9\uFF09\xF7 \u6210\u54C1\u5BBD = ${p.fullnessDisplay}`
     });
     if (p.usageBasis === "drop-length") {
       lines.push({
-        en: `Fixed-width usage = ${p.panels.map((x) => `${x.drops} drop \xD7 ${x.cutDropCm} cm`).join(" + ")} = ${p.usageMetersPerPiece} m`,
-        zh: `\u5B9A\u5BBD\u7528\u6599 = ${p.panels.map((x) => `${x.drops} \u5E45 \xD7 ${x.cutDropCm} \u5398\u7C73`).join(" + ")} = ${p.usageMetersPerPiece} \u7C73`
+        en: `Fixed-width usage = ${p.panels.map((x) => `${x.drops} width \xD7 (finished height + 30 cm)`).join(" + ")} = ${p.usageMetersPerPiece} m`,
+        zh: `\u5B9A\u5BBD\u7528\u6599 = ${p.panels.map((x) => `${x.drops} \u5E45 \xD7 \uFF08\u6210\u54C1\u9AD8 + 30 \u5398\u7C73\uFF09`).join(" + ")} = ${p.usageMetersPerPiece} \u7C73`
       });
     } else {
       lines.push({
@@ -1219,6 +1242,7 @@ var LQ = (() => {
       lead: 0
     },
     topFoldCm: 8,
+    fixedWidthAddCm: 30,
     grommetFabricPerPleat: 30,
     machineLimits: {
       "22": MAX_FOLDS_LIMIT[22].map((t) => ({

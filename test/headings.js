@@ -90,7 +90,7 @@ const knife30 = knifeAt(30);
 check("knife 2.2x uses 4.55 m", knife22.usageMetersPerPiece === 4.55 && knife22.pureFabricCm === 440 && knife22.allowanceCm === 15 && knife22.runnersPerPanel[0] == null && knife22.panels[0].hooks == null && !knife22.warnings.some((warning) => warning.code === "knife-pending"));
 check("knife 3.0x uses 6.15 m", knife30.usageMetersPerPiece === 6.15 && knife30.knifeMultiplier === 3);
 check("knife rejects 24 cm", knifeAt(24).errors.some((error) => error.code === "fpp"));
-check("knife actual fullness is usage over width", knife22.fullnessDisplay === Math.round((knife22.usageMetersPerPiece / 2) * 10) / 10);
+check("knife actual fullness excludes the 15 cm side hem", knife22.fullnessDisplay === 2.2 && knife30.fullnessDisplay === 3);
 const noted = run({ heading: "double_pinch", remarks: "80钩 / 89钩", hookSpec: "89钩", hookHeight: "35mm" });
 const quiet = run({ heading: "double_pinch" });
 check("hook spec and notes do not change runners or price", noted.runnersPerPanel.join() === quiet.runnersPerPanel.join() && noted.usageMetersPerPiece === quiet.usageMetersPerPiece && noted.pricing.curtainCny === quiet.pricing.curtainCny && noted.hookHeightMm === 35 && noted.hookSpec === "89钩");

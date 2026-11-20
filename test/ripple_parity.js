@@ -50,11 +50,10 @@ for (let width = 50; width <= 1000; width += 1) {
         const runnerSum = (ours.runnersPerPanel || []).reduce((sum, count) => sum + Number(count || 0), 0);
         const gliderOk = ours.totalGliders === owner.total && ours.totalCount === owner.folds && runnerSum === owner.total && (!isDouble || (ours.runnersPerPanel[0] === owner.half && ours.runnersPerPanel[1] === owner.half));
         const usageOk = Math.abs(ours.cutWidthCm - wf) < 0.02 && Math.abs(ours.usageMetersPerPiece - wf / 100) < 0.0005;
-        const ourFullness = round1(ours.usageMetersPerPiece / (width / 100));
         if (!gliderOk) gliderDiffs += 1;
         if (!usageOk) usageDiffs += 1;
         if (ours.fullnessDisplay !== ownerFullness) fullnessDiffs += 1;
-        if ((!gliderOk || !usageOk || ours.fullnessDisplay !== ourFullness) && samples.length < 5) {
+        if ((!gliderOk || !usageOk || ours.fullnessDisplay !== ownerFullness) && samples.length < 5) {
           samples.push({ width, pitch, film, isDouble, owner: owner.total, ours: ours.totalGliders, wf, cut: ours.cutWidthCm, ownerFullness, ourFullness: ours.fullnessDisplay });
         }
       });
@@ -63,8 +62,8 @@ for (let width = 50; width <= 1000; width += 1) {
 }
 console.log("RIPPLE PARITY", JSON.stringify({ rows, gliderDiffs, usageDiffs, fullnessDiffs, stepCm: 1, widths: "50-1000" }));
 if (samples.length) console.error("samples", samples);
-if (gliderDiffs || usageDiffs) {
-  console.error("Ripple glider or usage differs from the owner calculator");
+if (gliderDiffs || usageDiffs || fullnessDiffs) {
+  console.error("Ripple glider, usage or fullness differs from the owner calculator");
   process.exit(1);
 }
-console.log("Ripple folds, runners (2:1) and usage match the owner calculator. Fullness differs on " + fullnessDiffs + " of " + rows + " rows because that calculator uses pure fabric ÷ width, while this form uses usage ÷ finished width (the +15 cm per panel allowance is included). That owner rule is kept.");
+console.log("Ripple folds, runners (2:1), usage and fullness match the owner calculator. Fullness is pure fabric ÷ finished width; the side-hem allowance stays in the priced usage.");

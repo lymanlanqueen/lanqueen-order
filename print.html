@@ -12,7 +12,7 @@
   </header>
   <main class="no-print" style="display:block;max-width:800px">
     <h1>重打订单</h1>
-    <p class="lede">把邮件里的 JSON 粘贴到下面，或上传 .json 文件。金额会按订单参数和面料库重算，不采用 JSON 里的数字。若不一致，页面会标出。五金和汇率为待确认/估算，非正式报价。</p>
+    <p class="lede">把邮件里的 JSON 粘贴到下面，或上传 .json 文件。金额会按订单参数和面料库重算，不采用 JSON 里的数字。若不一致，页面会标出。Reference price (BOC conversion rate) / 参考价（中行折算价）。</p>
     <p class="warn recompute" id="diff" hidden></p>
     <textarea id="json" placeholder='{"number":"LQ-...","customer":{...},"windows":[...]}'></textarea>
     <p><input id="file" type="file" accept="application/json,.json"></p>

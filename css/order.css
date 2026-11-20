@@ -100,6 +100,7 @@ table.grid input, table.grid select { min-width: 64px; }
 .batch-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; border: 1px solid var(--line); border-radius: 16px; padding: 10px; margin: 0 0 10px; background: var(--card); }
 .batch-row label { min-width: 0; font-size: 11px; color: var(--muted); }
 .batch-row input, .batch-row select { width: 100%; min-width: 0; margin-top: 2px; padding: 6px 8px; font-size: 14px; }
+.batch-row.bad { outline: 3px solid var(--red); background: #fdf2f2; }
 .batch-row label.wide { grid-column: span 2; }
 .batch-actions, .batch-note { grid-column: 1 / -1; margin: 0; }
 .knife-help img { width: 100%; border-radius: 12px; }

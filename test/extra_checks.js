@@ -34,6 +34,9 @@ check("single ignores overlap", run({ draw: "single-left", width: 2, overlapCm: 
 check("return excess per panel", run({ draw: "single-left", width: 2, returnCm: 10 }).excessCm === 5);
 check("qty scales curtain", run({ quantity: 2 }).pricing.curtainCny === Math.round(plain.pricing.curtainCny * 2 * 100) / 100);
 check("toCm", LQ.toCm(1, "in") === 2.54 && LQ.toCm(1, "yd") === 91.44 && LQ.toCm(1, "m") === 100);
-check("fixed-width fold uses top", run({ orientation: "fixed-width", topFinish: "fold-8" }).usageMetersPerPiece > run({ orientation: "fixed-width" }).usageMetersPerPiece);
+const fixed = run({ orientation: "fixed-width", width: 2, height: 2.6, draw: "single-left" });
+const fixedDrops = fixed.panels.reduce((sum, panel) => sum + panel.drops, 0);
+check("fixed-width is widths times height plus 30 cm", Math.abs(fixed.usageMetersPerPiece - fixedDrops * (260 + 30) / 100) < 0.001);
+check("fixed-width top fold does not change usage", fixed.usageMetersPerPiece === run({ orientation: "fixed-width", width: 2, height: 2.6, draw: "single-left", topFinish: "fold-8" }).usageMetersPerPiece);
 if (failed) { console.error(failed + " extra checks failed"); process.exit(1); }
 console.log("extra checks passed");
