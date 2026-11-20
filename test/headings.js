@@ -40,7 +40,14 @@ function keyOf(value) {
   return LQ.normaliseHeading({ heading: value }).key;
 }
 check("韩褶 is X-Pleat", keyOf("韩褶") === "x_pleat" && keyOf("交叉褶") === "x_pleat" && keyOf("十字褶") === "x_pleat" && keyOf("X-Pleat") === "x_pleat");
-check("S-Wave and S-Fold are Ripple Fold", keyOf("S-Wave") === "ripple_fold" && keyOf("S-Fold") === "ripple_fold" && keyOf("蛇形") === "ripple_fold");
+check("工字褶 is Inverted Pleat", keyOf("工字褶") === "inverted" && keyOf("Inverted Pleat") === "inverted");
+["S-Wave", "S Wave", "S WAVE", "SWave", "S-Fold", "S Fold"].forEach((alias) => {
+  check(alias + " is Ripple Fold", keyOf(alias) === "ripple_fold" && LQ.normaliseHeading({ heading: alias }).pending == null);
+});
+const sky = LQ.normaliseHeading({ heading: "天际帘" });
+check("天际帘 provisionally selects Ripple Fold", sky.key === "ripple_fold" && sky.rule === "ripple" && sky.pending === "provisional-ripple");
+const skyNote = LQ.normaliseHeading({ heading: "天际帘（工序备注）" });
+check("天际帘 inside a note still selects Ripple Fold", skyNote.key === "ripple_fold" && skyNote.pending === "provisional-ripple");
 check("legacy pinch styles", keyOf("double-pinch") === "double_pinch" && keyOf("triple-pinch") === "triple_pinch" && keyOf("euro-double") === "euro_double" && keyOf("euro-triple") === "euro_triple" && keyOf("x-pleat") === "x_pleat" && keyOf("goblet") === "goblet");
 check("EVO keeps the inverted rule", LQ.normaliseHeading({ pinchStyle: "evo" }).key === "inverted" && LQ.normaliseHeading({ pinchStyle: "evo" }).extraPleat === true);
 check("eyelet is grommet", keyOf("eyelet") === "grommet" && LQ.normaliseHeading({ headingFamily: "grommet" }).key === "grommet");

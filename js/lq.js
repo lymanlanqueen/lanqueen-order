@@ -183,6 +183,7 @@ var LQ = (() => {
     sfold: "ripple_fold",
     "\u86C7\u5F62": "ripple_fold",
     "\u86C7\u5F62\u5E18": "ripple_fold",
+    "\u5929\u9645\u5E18": "ripple_fold",
     grommet: "grommet",
     eyelet: "grommet",
     eyelets: "grommet",
@@ -196,7 +197,10 @@ var LQ = (() => {
     if (value == null || String(value).trim() === "") return { type: "empty" };
     if (HEADING_LABEL[value]) return { type: "key", key: value, source: String(value) };
     const token = headingToken(value);
-    if (HEADING_ALIAS[token]) return { type: "key", key: HEADING_ALIAS[token], source: String(value) };
+    const raw = String(value);
+    const provisional = token === "\u5929\u9645\u5E18" || raw.indexOf("\u5929\u9645\u5E18") !== -1;
+    if (HEADING_ALIAS[token]) return { type: "key", key: HEADING_ALIAS[token], source: raw, provisional: provisional };
+    if (provisional) return { type: "key", key: "ripple_fold", source: raw, provisional: true };
     if (token === "pinch" || token === "pinch pleat" || token === "\u634F\u8936") return { type: "bare-pinch" };
     if (token === "knife" || token === "knife pleat" || token === "\u5200\u8936") return { type: "knife" };
     return { type: "unknown", source: String(value) };
@@ -209,7 +213,7 @@ var LQ = (() => {
     const picked = fromHeading.type === "key" ? fromHeading : fromStyle.type === "key" ? fromStyle : fromFamily.type === "key" ? fromFamily : null;
     if (picked) {
       const spec = HEADING_LABEL[picked.key];
-      return { key: picked.key, en: spec.en, zh: spec.zh, rule: spec.rule, extraPleat: !!spec.extraPleat, pending: null, source: picked.source };
+      return { key: picked.key, en: spec.en, zh: spec.zh, rule: spec.rule, extraPleat: !!spec.extraPleat, pending: picked.provisional ? "provisional-ripple" : null, source: picked.source };
     }
     const knife = fromHeading.type === "knife" || fromStyle.type === "knife" || fromFamily.type === "knife";
     if (knife) return { key: null, en: "Knife pleat", zh: "\u5200\u8936", rule: "pleat", extraPleat: false, pending: "knife", source: "knife" };
@@ -641,6 +645,9 @@ var LQ = (() => {
     }
     if (heading.pending === "knife") {
       warnings.push(msg("heading-pending", "Knife pleat is not on the official heading chart. The current fold count is unchanged and matches Double Pinch Pleat, but this row is not renamed. Pending owner rule.", "\u5200\u8936\u4E0D\u5728\u6B63\u5F0F\u5E18\u5934\u8868\u91CC\u3002\u8936\u6570\u4ECD\u7528\u73B0\u5728\u7684\u516C\u5F0F\uFF0C\u4E0E\u53CC\u8936\u76F8\u540C\uFF0C\u4F46\u4E0D\u6539\u540D\u3002\u5F85\u4E1A\u4E3B\u786E\u8BA4\u89C4\u5219\u3002", "heading"));
+    }
+    if (heading.pending === "provisional-ripple") {
+      warnings.push(msg("heading-provisional", "\u5929\u9645\u5E18 is provisionally treated as Ripple Fold. The owner has not confirmed they are the same.", "\u5929\u9645\u5E18\u6682\u6309\u86C7\u5F62 Ripple Fold \u8BA1\u7B97\uFF0C\u4E1A\u4E3B\u5C1A\u672A\u786E\u8BA4\u4E24\u8005\u662F\u5426\u76F8\u540C\u3002", "heading"));
     }
     if (family === "ripple" && !input.rippleTape) {
       errors.push(msg("tape", "Choose rivet tape or mesh tape.", "\u8BF7\u9009\u62E9\u94C6\u9489\u5E26\u6216\u7F51\u683C\u5E26\u3002", "rippleTape"));
