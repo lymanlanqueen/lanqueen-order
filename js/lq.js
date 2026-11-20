@@ -46,7 +46,10 @@ var LQ = (() => {
     INPUT_LIMITS: () => INPUT_LIMITS,
     NOT_A_QUOTE: () => NOT_A_QUOTE,
     computeWindow: () => computeWindow,
+    HEADING_LABEL: () => HEADING_LABEL,
+    HEADING_ORDER: () => HEADING_ORDER,
     headingSummary: () => headingSummary,
+    normaliseHeading: () => normaliseHeading,
     LINING_PRICING: () => LINING_PRICING,
     parseColorSpec: () => parseColorSpec,
     COM_NOTE: () => COM_NOTE,
@@ -128,6 +131,92 @@ var LQ = (() => {
 
   // lib/calc/window.ts
   var EXTRA_PLEAT = ["evo", "inverted"];
+  var HEADING_LABEL = {
+    x_pleat: { en: "X-Pleat", zh: "\u4EA4\u53C9\u8936\uFF08\u5341\u5B57\u8936\uFF09", rule: "pleat", extraPleat: false },
+    double_pinch: { en: "Double Pinch Pleat", zh: "\u53CC\u8936", rule: "pleat", extraPleat: false },
+    triple_pinch: { en: "Triple Pinch Pleat", zh: "\u4E09\u8936", rule: "pleat", extraPleat: false },
+    euro_double: { en: "Euro Double Pleat", zh: "\u6B27\u5F0F\u53CC\u8936", rule: "pleat", extraPleat: false },
+    euro_triple: { en: "Euro Triple Pleat", zh: "\u6B27\u5F0F\u4E09\u8936", rule: "pleat", extraPleat: false },
+    inverted: { en: "Inverted Pleat", zh: "\u5DE5\u5B57\u8936", rule: "pleat", extraPleat: true },
+    goblet: { en: "Goblet Pleat", zh: "\u9152\u676F\u8936", rule: "pleat", extraPleat: false },
+    ripple_fold: { en: "Ripple Fold", zh: "\u86C7\u5F62", rule: "ripple", extraPleat: false },
+    grommet: { en: "Grommet / Eyelet", zh: "\u6253\u5B54", rule: "grommet", extraPleat: false }
+  };
+  var HEADING_ORDER = ["x_pleat", "double_pinch", "triple_pinch", "euro_double", "euro_triple", "inverted", "goblet", "ripple_fold", "grommet"];
+  var HEADING_ALIAS = {
+    "x pleat": "x_pleat",
+    xpleat: "x_pleat",
+    "\u4EA4\u53C9\u8936": "x_pleat",
+    "\u5341\u5B57\u8936": "x_pleat",
+    "\u4EA4\u53C9\u8936 \u5341\u5B57\u8936": "x_pleat",
+    "\u97E9\u8936": "x_pleat",
+    "\u97E9\u6298": "x_pleat",
+    "korean pleat": "x_pleat",
+    "double pinch": "double_pinch",
+    "double pinch pleat": "double_pinch",
+    "\u53CC\u8936": "double_pinch",
+    "two finger": "double_pinch",
+    "triple pinch": "triple_pinch",
+    "triple pinch pleat": "triple_pinch",
+    "\u4E09\u8936": "triple_pinch",
+    "three finger": "triple_pinch",
+    "euro double": "euro_double",
+    "euro double pleat": "euro_double",
+    "\u6B27\u5F0F\u53CC\u8936": "euro_double",
+    "euro triple": "euro_triple",
+    "euro triple pleat": "euro_triple",
+    "\u6B27\u5F0F\u4E09\u8936": "euro_triple",
+    inverted: "inverted",
+    "inverted pleat": "inverted",
+    "\u5DE5\u5B57\u8936": "inverted",
+    "\u5012\u7F6E\u5DE5\u5B57\u8936": "inverted",
+    "box pleat": "inverted",
+    goblet: "goblet",
+    "goblet pleat": "goblet",
+    "\u9152\u676F\u8936": "goblet",
+    "\u676F\u72B6\u8936": "goblet",
+    ripple: "ripple_fold",
+    "ripple fold": "ripple_fold",
+    "s wave": "ripple_fold",
+    swave: "ripple_fold",
+    "s fold": "ripple_fold",
+    sfold: "ripple_fold",
+    "\u86C7\u5F62": "ripple_fold",
+    "\u86C7\u5F62\u5E18": "ripple_fold",
+    grommet: "grommet",
+    eyelet: "grommet",
+    eyelets: "grommet",
+    "\u6253\u5B54": "grommet",
+    evo: "inverted"
+  };
+  function headingToken(value) {
+    return String(value || "").trim().toLowerCase().replace(/[()（）]/g, " ").replace(/[_/·,.-]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function classifyHeading(value) {
+    if (value == null || String(value).trim() === "") return { type: "empty" };
+    if (HEADING_LABEL[value]) return { type: "key", key: value, source: String(value) };
+    const token = headingToken(value);
+    if (HEADING_ALIAS[token]) return { type: "key", key: HEADING_ALIAS[token], source: String(value) };
+    if (token === "pinch" || token === "pinch pleat" || token === "\u634F\u8936") return { type: "bare-pinch" };
+    if (token === "knife" || token === "knife pleat" || token === "\u5200\u8936") return { type: "knife" };
+    return { type: "unknown", source: String(value) };
+  }
+  function normaliseHeading(input) {
+    const source = input || {};
+    const fromHeading = classifyHeading(source.heading);
+    const fromStyle = classifyHeading(source.pinchStyle);
+    const fromFamily = classifyHeading(source.headingFamily);
+    const picked = fromHeading.type === "key" ? fromHeading : fromStyle.type === "key" ? fromStyle : fromFamily.type === "key" ? fromFamily : null;
+    if (picked) {
+      const spec = HEADING_LABEL[picked.key];
+      return { key: picked.key, en: spec.en, zh: spec.zh, rule: spec.rule, extraPleat: !!spec.extraPleat, pending: null, source: picked.source };
+    }
+    const knife = fromHeading.type === "knife" || fromStyle.type === "knife" || fromFamily.type === "knife";
+    if (knife) return { key: null, en: "Knife pleat", zh: "\u5200\u8936", rule: "pleat", extraPleat: false, pending: "knife", source: "knife" };
+    const bare = fromHeading.type === "bare-pinch" || fromFamily.type === "bare-pinch" || fromStyle.type === "bare-pinch";
+    if (bare) return { key: null, en: null, zh: null, rule: "pleat", extraPleat: false, pending: "bare-pinch", source: source.heading || source.headingFamily || "pinch" };
+    return { key: null, en: null, zh: null, rule: null, extraPleat: false, pending: "unknown", source: String(source.heading || source.pinchStyle || source.headingFamily || "") };
+  }
   var PITCHES = /* @__PURE__ */ new Set([5.4, 6, 7, 8, 9, 10]);
   var FOLDS = /* @__PURE__ */ new Set([22, 24, 30]);
   var UNIT_TO_CM = { mm: 0.1, cm: 1, m: 100, in: 2.54, yd: 91.44 };
@@ -492,7 +581,8 @@ var LQ = (() => {
     const unequal = split && Math.abs(panelWidths[0] - panelWidths[1]) > 0.05;
     const panelWidthCm = panelWidths[0] || 0;
     const heightCm = unitOk && Number.isFinite(heightValue) ? toCm(heightValue, input.unit) : 0;
-    const family = input.headingFamily;
+    const heading = normaliseHeading(input);
+    const family = heading.rule === "grommet" ? "grommet" : heading.rule === "ripple" ? "ripple" : heading.rule === "pleat" ? (heading.pending === "knife" ? "knife" : "pinch") : (input.headingFamily || "");
     const fabricPerPleat = family === "grommet" ? rules.grommetFabricPerPleat : Number(input.fabricPerPleat);
     const hookSpacing = family === "ripple" ? null : rules.hookSpacingDefaultCm;
     const pitch = family === "ripple" ? Number(input.gliderPitch ?? 6) : null;
@@ -546,8 +636,11 @@ var LQ = (() => {
       };
       if (!(fabric.widthCm > 0)) errors.push(msg("com-width", "Enter the customer fabric width in centimetres.", "\u8BF7\u586B\u5199\u5BA2\u4F9B\u9762\u6599\u95E8\u5E45\uFF08\u5398\u7C73\uFF09\u3002", "comWidthCm"));
     } else if (!fabric) errors.push(msg("fabric", "Choose a fabric model.", "\u8BF7\u9009\u62E9\u9762\u6599\u578B\u53F7\u3002", "fabricId"));
-    if (family === "pinch" && !input.pinchStyle) {
-      errors.push(msg("pinch", "Choose a pinch style.", "\u8BF7\u9009\u62E9\u634F\u8936\u6837\u5F0F\u3002", "pinchStyle"));
+    if (heading.pending === "bare-pinch") {
+      errors.push(msg("pinch", "Choose a heading. Pinch on its own is not a style.", "\u8BF7\u9009\u62E9\u5E18\u5934\u3002\u5355\u72EC\u7684\u634F\u8936\u4E0D\u662F\u4E00\u79CD\u6837\u5F0F\u3002", "heading"));
+    }
+    if (heading.pending === "knife") {
+      warnings.push(msg("heading-pending", "Knife pleat is not on the official heading chart. The current fold count is unchanged and matches Double Pinch Pleat, but this row is not renamed. Pending owner rule.", "\u5200\u8936\u4E0D\u5728\u6B63\u5F0F\u5E18\u5934\u8868\u91CC\u3002\u8936\u6570\u4ECD\u7528\u73B0\u5728\u7684\u516C\u5F0F\uFF0C\u4E0E\u53CC\u8936\u76F8\u540C\uFF0C\u4F46\u4E0D\u6539\u540D\u3002\u5F85\u4E1A\u4E3B\u786E\u8BA4\u89C4\u5219\u3002", "heading"));
     }
     if (family === "ripple" && !input.rippleTape) {
       errors.push(msg("tape", "Choose rivet tape or mesh tape.", "\u8BF7\u9009\u62E9\u94C6\u9489\u5E26\u6216\u7F51\u683C\u5E26\u3002", "rippleTape"));
@@ -589,7 +682,7 @@ var LQ = (() => {
     if (!rules.enabledFamilies.includes(family)) {
       errors.push(msg("family", "This heading is not offered.", "\u8BE5\u5E18\u5934\u6682\u4E0D\u63A5\u53D7\u4E0B\u5355\u3002", "headingFamily"));
     }
-    if (family === "pinch" && input.pinchStyle && !rules.enabledPinch.includes(input.pinchStyle)) {
+    if (family === "pinch" && input.pinchStyle && !heading.key && !rules.enabledPinch.includes(input.pinchStyle)) {
       errors.push(msg("pinch-off", "This pinch style is not offered.", "\u8BE5\u634F\u8936\u6837\u5F0F\u6682\u4E0D\u63A5\u53D7\u4E0B\u5355\u3002", "pinchStyle"));
     }
     if (family === "ripple" && input.rippleTape && !rules.enabledRippleTapes.includes(input.rippleTape)) {
@@ -626,7 +719,7 @@ var LQ = (() => {
         return { folds: rings / 2, rings };
       }
       let pleats = excelRoundUp(panelCm / hookSpacing) - 1;
-      if (family === "pinch" && input.pinchStyle && EXTRA_PLEAT.includes(input.pinchStyle)) pleats += 1;
+      if (heading.extraPleat) pleats += 1;
       return { folds: pleats, rings: null };
     }
     const ringCounts = [];
@@ -841,6 +934,8 @@ var LQ = (() => {
       runnerOverride,
       makingHooksPerPanel: panels.map((panel) => panel.hooks),
       orderedFullness: statedFullness != null && Number.isFinite(statedFullness) ? round1(statedFullness) : null,
+      heading,
+      calcRule: heading.pending === "knife" ? "knife-same-count-as-double-pinch" : heading.rule === "ripple" ? "ripple-2to1" : heading.rule === "grommet" ? "grommet" : heading.extraPleat ? "pleat-plus-1" : heading.rule === "pleat" ? "pleat-shared" : null,
       pricing: { widthM, trackM, curtainCny, trackCny, motorCny, tiebackCny, liningCny, lineCny, priceCnyPerM, cutFabricCnyPerM, priceQuoted },
       errors,
       warnings,
@@ -1147,14 +1242,16 @@ var LQ = (() => {
     yd: { en: "Yard", zh: "\u7801" }
   };
   function headingSummary(input) {
-    if (input.headingFamily === "pinch" && input.pinchStyle) return PINCH_LABEL[input.pinchStyle];
-    if (input.headingFamily === "ripple" && input.rippleTape) {
-      return {
-        en: `Ripple Fold \xB7 ${TAPE_LABEL[input.rippleTape].en}`,
-        zh: `\u86C7\u5F62\u5E18 \xB7 ${TAPE_LABEL[input.rippleTape].zh}`
-      };
+    const heading = normaliseHeading(input);
+    if (heading.key && HEADING_LABEL[heading.key]) {
+      const label = HEADING_LABEL[heading.key];
+      if (heading.key === "ripple_fold" && input.rippleTape && TAPE_LABEL[input.rippleTape]) {
+        return { en: label.en + " \xB7 " + TAPE_LABEL[input.rippleTape].en, zh: label.zh + " \xB7 " + TAPE_LABEL[input.rippleTape].zh };
+      }
+      return { en: label.en, zh: label.zh };
     }
-    return FAMILY_LABEL[input.headingFamily];
+    if (heading.pending === "knife") return { en: heading.en, zh: heading.zh };
+    return { en: "Heading", zh: "\u5E18\u5934" };
   }
   return __toCommonJS(static_entry_exports);
 })();

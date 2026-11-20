@@ -30,7 +30,7 @@
   }
   function blankWindow() {
     return {
-      name: "", headingFamily: "pinch", pinchStyle: "double-pinch", rippleTape: "rivet",
+      name: "", heading: "double_pinch", headingFamily: "pinch", pinchStyle: "double-pinch", rippleTape: "rivet",
       orientation: "fixed-height", lining: "none", topFinish: "none", width: "", height: "", unit: "m",
       fabricPerPleat: 24, gliderPitch: 6, hookSpacingCm: 10, draw: "double", hem: "8+2",
       returnCm: "5", overlapCm: "5", tieback: "none", tiebackRemark: "", hardware: "customer",
@@ -60,10 +60,10 @@
   function toInput(source) {
     const colorRaw = source.colorNumber;
     return {
-      name: source.name, headingFamily: source.headingFamily, pinchStyle: source.pinchStyle, rippleTape: source.rippleTape,
+      name: source.name, heading: LQ.normaliseHeading(source).key, headingFamily: source.headingFamily, pinchStyle: source.pinchStyle, rippleTape: source.rippleTape,
       orientation: source.orientation, lining: source.lining, topFinish: source.topFinish,
       width: LQ.parseDecimal(source.width), height: LQ.parseDecimal(source.height), unit: source.unit,
-      fabricPerPleat: source.headingFamily === "grommet" ? 30 : Number(source.fabricPerPleat),
+      fabricPerPleat: LQ.normaliseHeading(source).rule === "grommet" ? 30 : Number(source.fabricPerPleat),
       gliderPitch: Number(source.gliderPitch), hookSpacingCm: LQ.DEFAULT_RULES.hookSpacingDefaultCm,
       draw: LQ.normaliseDraw(source.draw), hem: source.hem, returnCm: LQ.parseDecimal(source.returnCm), overlapCm: LQ.parseDecimal(source.overlapCm),
       widthBasis: source.widthBasis === "finished" || source.widthBasis === "track" ? source.widthBasis : "",
@@ -238,15 +238,9 @@
     let body = "<p class='note'>WINDOW · " + (step + 1) + "/" + STEPS.length + "</p><h1>" + t(STEPS[step][0], STEPS[step][1]) + "</h1><div class='steps'>" + STEPS.map((_, index) => "<i class='" + (index === step ? "on" : index < step ? "done" : "") + "'></i>").join("") + "</div>";
     if (step === 2) {
       body += field("Window name", "窗位名称", "<input data-w='name' placeholder='" + t("Living room", "客厅") + "' value='" + esc(draft.name) + "'>");
-      body += "<div class='choices'>" + rules.enabledFamilies.map((family) => choice(draft.headingFamily === family, "data-wset='headingFamily' data-value='" + family + "'", bi(LQ.FAMILY_LABEL[family].en, LQ.FAMILY_LABEL[family].zh))).join("") + "</div>";
-      if (draft.headingFamily === "pinch") {
-        LQ.PINCH_GROUP.forEach((group) => {
-          const styles = group.styles.filter((style) => rules.enabledPinch.includes(style));
-          if (!styles.length) return;
-          body += "<p class='note'>" + esc(group.zh) + " / " + esc(group.en) + "</p><div class='choices'>" + styles.map((style) => choice(draft.pinchStyle === style, "data-wset='pinchStyle' data-value='" + style + "'", bi(LQ.PINCH_LABEL[style].en, LQ.PINCH_LABEL[style].zh))).join("") + "</div>";
-        });
-      }
-      if (draft.headingFamily === "ripple") {
+      const headingNow = draft.heading || LQ.normaliseHeading(draft).key || "";
+      body += "<div class='choices'>" + LQ.HEADING_ORDER.map((key) => choice(headingNow === key, "data-wset='heading' data-value='" + key + "'", bi(LQ.HEADING_LABEL[key].en, LQ.HEADING_LABEL[key].zh))).join("") + "</div>";
+      if (headingNow === "ripple_fold") {
         body += "<div class='choices'>" + rules.enabledRippleTapes.map((tape) => choice(draft.rippleTape === tape, "data-wset='rippleTape' data-value='" + tape + "'", bi(LQ.TAPE_LABEL[tape].en, LQ.TAPE_LABEL[tape].zh))).join("") + "</div>";
       }
       body += "<div class='choices'>" + Object.keys(LQ.ORIENTATION_LABEL).map((key) => choice(draft.orientation === key, "data-wset='orientation' data-value='" + key + "'", bi(LQ.ORIENTATION_LABEL[key].en, LQ.ORIENTATION_LABEL[key].zh))).join("") + "</div>";
@@ -269,12 +263,12 @@
       body += inline("width") + inline("height");
     }
     if (step === 4) {
-      if (draft.headingFamily === "ripple") {
+      if (LQ.normaliseHeading(draft).rule === "ripple") {
         body += "<p class='note'>" + t("Glider pitch. 6 cm is the usual choice.", "滑轮间距，6 厘米为推荐。") + "</p><div class='choices'>" + [5.4, 6, 7, 8, 9, 10].map((pitch) => choice(Number(draft.gliderPitch) === pitch, "data-wset='gliderPitch' data-value='" + pitch + "'", pitch + " cm" + (pitch === 6 ? " ★" : ""))).join("") + "</div>";
       } else {
         body += "<p class='note'>Hook spacing is fixed at 10 cm. / 挂钩间距固定为 10 厘米。</p>";
       }
-      if (draft.headingFamily === "grommet") {
+      if (LQ.normaliseHeading(draft).rule === "grommet") {
         body += "<p class='note'>Grommet film is fixed at 30 cm. Folds = ring count ÷ 2. / 打孔纸膜固定 30 厘米。褶位数 = 环数 ÷ 2。</p>";
       } else {
         body += "<p class='note'>" + t("Fabric per pleat. 24 cm is about 2.2× and is the default.", "褶用料。24 厘米约 2.2 倍，为默认。") + "</p><div class='choices'>";
@@ -347,7 +341,7 @@
   }
 
   function tableView() {
-    const head = "<tr><th>Model</th><th>Width</th><th>Height</th><th>Unit</th><th>L</th><th>R</th><th>Open</th><th>Basis</th><th>Location</th><th>Qty</th><th></th></tr>";
+    const head = "<tr><th>Model</th><th>Width</th><th>Height</th><th>Unit</th><th>Heading</th><th>L</th><th>R</th><th>Open</th><th>Basis</th><th>Location</th><th>Qty</th><th></th></tr>";
     const body = windows.map((item, index) => {
       const result = computeDraft(item);
       const warn = result ? result.warnings.map((warning) => warning.en).join("; ") : "";
@@ -356,6 +350,7 @@
         "<td><input data-row='" + index + "' data-field='width' value='" + esc(item.width) + "'></td>" +
         "<td><input data-row='" + index + "' data-field='height' value='" + esc(item.height) + "'></td>" +
         "<td><select data-row='" + index + "' data-field='unit'>" + Object.keys(LQ.UNIT_LABEL).map((unit) => "<option value='" + unit + "'" + (item.unit === unit ? " selected" : "") + ">" + unit + "</option>").join("") + "</select></td>" +
+        "<td><select data-row='" + index + "' data-field='heading'>" + LQ.HEADING_ORDER.map((key) => "<option value='" + key + "'" + ((item.heading || LQ.normaliseHeading(item).key) === key ? " selected" : "") + ">" + esc(LQ.HEADING_LABEL[key].en) + " " + esc(LQ.HEADING_LABEL[key].zh) + "</option>").join("") + "</select></td>" +
         "<td><input data-row='" + index + "' data-field='leftWidth' value='" + esc(item.leftWidth) + "'></td>" +
         "<td><input data-row='" + index + "' data-field='rightWidth' value='" + esc(item.rightWidth) + "'></td>" +
         "<td><select data-row='" + index + "' data-field='draw'>" + Object.keys(LQ.DRAW_LABEL).map((key) => "<option value='" + key + "'" + (item.draw === key ? " selected" : "") + ">" + LQ.DRAW_LABEL[key].en + "</option>").join("") + "</select></td>" +
@@ -363,7 +358,7 @@
         "<td><input data-row='" + index + "' data-field='location' value='" + esc(item.location || item.name) + "'></td>" +
         "<td><input data-row='" + index + "' data-field='quantity' value='" + esc(item.quantity) + "'></td>" +
         "<td><button type='button' class='btn alt' data-act='dup' data-index='" + index + "'>Clone</button> <button type='button' class='btn alt' data-act='expand' data-index='" + index + "'>Expand</button> <button type='button' class='btn alt' data-act='remove' data-index='" + index + "'>Del</button></td></tr>" +
-        "<tr><td colspan='11' class='note'>" + esc(result ? result.usageMetersPerPiece + " m · ¥" + result.pricing.lineCny.toFixed(2) : "") + (warn ? " · " + esc(warn) : "") + (err ? " · " + esc(err) : "") + "</td></tr>";
+        "<tr><td colspan='12' class='note'>" + esc(result ? result.usageMetersPerPiece + " m · ¥" + result.pricing.lineCny.toFixed(2) : "") + (warn ? " · " + esc(warn) : "") + (err ? " · " + esc(err) : "") + "</td></tr>";
     }).join("");
     const total = windows.reduce((sum, item) => { const result = computeDraft(item); return sum + (result ? result.pricing.lineCny : 0); }, 0);
     return "<h1>" + t("Table", "表格") + "</h1><p class='lede'>" + t("One row per window. Paste tab-separated rows below: location, width, height, unit, draw, model id, quantity.", "一行一窗。可粘贴制表符分隔：位置、宽、高、单位、开合、型号、数量。") + "</p>" +
@@ -523,7 +518,10 @@
       if (choiceButton.dataset.wset && draft) {
         const numeric = choiceButton.dataset.wset === "gliderPitch" || choiceButton.dataset.wset === "fabricPerPleat" || choiceButton.dataset.wset === "colorNumber";
         draft[choiceButton.dataset.wset] = numeric ? Number(choiceButton.dataset.value) : choiceButton.dataset.value;
-        if (choiceButton.dataset.wset === "headingFamily" && choiceButton.dataset.value === "grommet") draft.fabricPerPleat = 30;
+        if (choiceButton.dataset.wset === "heading") {
+          draft.heading = choiceButton.dataset.value;
+          if (LQ.HEADING_LABEL[draft.heading] && LQ.HEADING_LABEL[draft.heading].rule === "grommet") draft.fabricPerPleat = 30;
+        }
         if (choiceButton.dataset.wset === "category") {
           const row = catalog.find((item) => item.id === draft.fabricId);
           if (!row || row.category !== draft.category) draft.fabricId = "";

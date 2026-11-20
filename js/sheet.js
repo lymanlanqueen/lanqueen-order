@@ -59,6 +59,7 @@
     html += row(sheetEnglish ? "Width basis" : "Width basis / 宽度基准", input.widthBasis === "finished" ? "Finished width" : "Track width");
     html += row(sheetEnglish ? "Finished width" : "Finished width / 成品宽", result.widthCm + " cm  (" + esc(input.width) + " " + esc(input.unit) + ")");
     html += row(sheetEnglish ? "Finished height" : "Finished height / 成品高", result.heightCm + " cm  (" + esc(input.height) + " " + esc(input.unit) + ")");
+    html += row(sheetEnglish ? "Heading" : "Heading / 帘头", esc(head.en) + " / " + esc(head.zh) + (result.heading && result.heading.key ? " · " + esc(result.heading.key) : "") + (result.heading && result.heading.pending ? " · pending owner rule" : ""));
     if (result.unequal) html += row(sheetEnglish ? "Panels" : "Panels / 左右", result.panels.map((panel) => panel.side + " " + panel.widthCm + " cm").join(", "));
     html += row(sheetEnglish ? "Orientation" : "Orientation / 方向", both(LQ.ORIENTATION_LABEL[input.orientation]));
     html += row("Lining / 里布", both(LQ.LINING_LABEL[input.lining]));
@@ -172,7 +173,7 @@
       lines.push("--- Window " + (index + 1) + ": " + input.name + " ---");
       lines.push("Location: " + (input.location || ""));
       lines.push("Colour: " + (input.colourName || "") + "  Supplier: " + (input.supplier || "") + "  Source: " + (input.fabricSource || "catalog"));
-      lines.push("Heading: " + head.en + " / " + head.zh);
+      lines.push("Heading: " + head.en + " / " + head.zh + "  key: " + ((result.heading && result.heading.key) || input.heading || ""));
       lines.push("Size: " + input.width + " x " + input.height + " " + input.unit + " = " + result.widthCm + " x " + result.heightCm + " cm");
       lines.push("Orientation: " + input.orientation + "  Lining: " + input.lining + "  Top: " + input.topFinish);
       lines.push("Draw: " + input.draw + "  Hem: " + input.hem + "  Return: " + input.returnCm + "  Overlap: " + input.overlapCm);

@@ -17,6 +17,8 @@ On this repository you can also turn on Pages → Deploy from branch → `main` 
 
 `print.html` is for the studio. Customers do not need it. The confirmation page on the form also has Print / Save PDF.
 
+Headings are the eight official pleats plus Grommet / Eyelet. Ripple Fold keeps the S-Wave rule. The other pleats keep the current shared spacing formula, and Inverted Pleat keeps the existing extra pleat. A bare “pinch” is not treated as Double Pinch Pleat.
+
 The curtain total is finished RMB per metre × fabric usage. 散剪面料价 Cut Fabric Price is shown and is not part of that total. Lining, when chosen, is Endura at its finished price (82.5 RMB/m in the current list) × the same usage × quantity. Hardware prices and the USD/AUD rates are placeholders, marked 待确认/估算 To be confirmed / estimate, and are not a formal quote. Foreign currency is converted from RMB.
 
 `node tools/build_catalog.js` rebuilds `data/catalog.json` from `tools/pricelist_full.txt`. `npm test` runs the order checks.
