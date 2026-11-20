@@ -1,0 +1,18 @@
+{
+  "source": "Bank of China",
+  "note": "Final amount converted at the Bank of China rate on the day of remittance / 最终金额按汇款当日中国银行牌价换算",
+  "rates": [
+    {
+      "currency": "USD",
+      "rateCny": 6.766,
+      "rateDate": "2026-06-01",
+      "source": "Bank of China"
+    },
+    {
+      "currency": "AUD",
+      "rateCny": 4.8592,
+      "rateDate": "2026-06-01",
+      "source": "Bank of China"
+    }
+  ]
+}

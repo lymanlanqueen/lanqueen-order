@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LAN QUEEN 重打订单</title>
+  <link rel="stylesheet" href="css/order.css">
+</head>
+<body>
+  <header class="top no-print">
+    <a class="brand" href="index.html"><b>LAN QUEEN</b><span>客服重打 · Reprint</span></a>
+  </header>
+  <main class="no-print" style="display:block;max-width:800px">
+    <h1>重打订单</h1>
+    <p class="lede">把邮件里的 JSON 粘贴到下面，或上传 .json 文件。然后打印 A4。客户确认单和生产单会各出一页。</p>
+    <textarea id="json" placeholder='{"number":"LQ-...","customer":{...},"windows":[...]}'></textarea>
+    <p><input id="file" type="file" accept="application/json,.json"></p>
+    <p><button class="btn" id="render" type="button">生成订单</button> <button class="btn alt" id="print" type="button">打印 / 存 PDF</button></p>
+    <p class="warn" id="err"></p>
+  </main>
+  <div id="print-root"></div>
+  <script src="js/lq.js"></script>
+  <script src="js/sheet.js"></script>
+  <script>
+    const err = document.querySelector("#err");
+    function show(text) {
+      err.textContent = "";
+      let order;
+      try { order = JSON.parse(text); }
+      catch (error) { err.textContent = "JSON 无法解析。"; return; }
+      if (!order || !order.customer || !Array.isArray(order.windows)) {
+        err.textContent = "这不是一份订单 JSON。需要 customer 和 windows。";
+        return;
+      }
+      document.querySelector("#print-root").innerHTML = LQSheet.sheetsHtml(order);
+    }
+    document.querySelector("#render").addEventListener("click", () => show(document.querySelector("#json").value));
+    document.querySelector("#print").addEventListener("click", () => window.print());
+    document.querySelector("#file").addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.querySelector("#json").value = String(reader.result || "");
+        show(String(reader.result || ""));
+      };
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>
